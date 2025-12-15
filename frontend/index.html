@@ -2,51 +2,77 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Create Fixed Asset</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Fixed Asset Entry</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="container">
-    <h2>Create Fixed Asset</h2>
+<div class="page">
+    <div class="card">
+        <h1>Create Fixed Asset</h1>
+        <div class="subtitle">
+            Draft asset will be created in Zoho Books
+        </div>
 
-    <form id="assetForm">
-        <label>Asset Name</label>
-        <input type="text" id="asset_name" required>
+        <form id="assetForm">
 
-        <label>Asset Category</label>
-        <select id="asset_category" required>
-            <option value="COMPUTERS">Computers</option>
-            <option value="FURNITURE">Furniture</option>
-        </select>
+            <div class="field">
+                <label>Asset Name</label>
+                <input id="asset_name" required>
+            </div>
 
-        <label>Purchase Cost</label>
-        <input type="number" id="asset_cost" required>
+            <div class="field">
+                <label>Asset Category</label>
+                <select id="asset_category" required>
+                    <option value="COMPUTERS">Computers & Electronics</option>
+                    <option value="FURNITURE">Furniture & Equipment</option>
+                </select>
+            </div>
 
-        <label>Purchase Date</label>
-        <input type="date" id="purchase_date" required>
+            <div class="field">
+                <label>Purchase Cost</label>
+                <input type="number" id="asset_cost" required>
+            </div>
 
-        <label>Depreciation Start Date</label>
-        <input type="date" id="depreciation_start_date" required>
+            <div class="field">
+                <label>Purchase Date</label>
+                <input type="date" id="purchase_date" required>
+            </div>
 
-        <label>Useful Life (Months)</label>
-        <input type="number" id="useful_life_months" required>
+            <div class="field">
+                <label>Depreciation Start Date</label>
+                <input type="date" id="depreciation_start_date" required>
+            </div>
 
-        <label>Salvage Value</label>
-        <input type="number" id="salvage_value" value="0">
+            <div class="field">
+                <label>Useful Life (Months)</label>
+                <input type="number" id="useful_life_months" required>
+            </div>
 
-        <button type="submit">Create Asset</button>
-    </form>
+            <div class="field">
+                <label>Salvage Value</label>
+                <input type="number" id="salvage_value" value="0">
+            </div>
 
-    <div id="result" class="result"></div>
+            <button id="submitBtn" type="submit">
+                Create Asset
+            </button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
 </div>
 
 <script>
-document.getElementById("assetForm").addEventListener("submit", async function(e) {
-    e.preventDefault();
+const form = document.getElementById("assetForm");
+const result = document.getElementById("result");
+const btn = document.getElementById("submitBtn");
 
-    const resultBox = document.getElementById("result");
-    resultBox.style.display = "none";
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.textContent = "Creating…";
+    result.style.display = "none";
 
     const payload = {
         asset_name: asset_name.value,
@@ -59,7 +85,7 @@ document.getElementById("assetForm").addEventListener("submit", async function(e
     };
 
     try {
-        const res = await fetch("https://asset-service-eff1.onrender.com/assets/create", {
+        const res = await fetch("/assets/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
@@ -68,19 +94,20 @@ document.getElementById("assetForm").addEventListener("submit", async function(e
         const data = await res.json();
 
         if (data.ok) {
-            resultBox.className = "result success";
-            resultBox.textContent =
-                `Asset created successfully\nAsset Number: ${data.asset_number}`;
+            result.className = "result success";
+            result.textContent = `Asset created successfully (Asset No: ${data.asset_number})`;
+            form.reset();
         } else {
-            resultBox.className = "result error";
-            resultBox.textContent = "Error creating asset";
+            throw new Error("Failed");
         }
-    } catch (err) {
-        resultBox.className = "result error";
-        resultBox.textContent = "Connection error";
+    } catch {
+        result.className = "result error";
+        result.textContent = "Failed to create asset. Please check inputs.";
     }
 
-    resultBox.style.display = "block";
+    result.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Create Asset";
 });
 </script>
 
