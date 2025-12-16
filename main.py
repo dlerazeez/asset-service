@@ -185,7 +185,6 @@ def list_all_assets():
                 "organization_id": ZOHO_ORG_ID,
                 "page": page,
                 "per_page": per_page,
-                "status": "all",
             },
             headers={"Authorization": f"Zoho-oauthtoken {token}"},
             timeout=30,
