@@ -2,8 +2,11 @@
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Assets & Expenses</title>
-  <link rel="stylesheet" href="/static/style.css?v=5">
+  <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
 
@@ -14,7 +17,6 @@
     <!-- ASSETS SECTION -->
     <section id="assetsSection" class="section">
       <div class="card">
-
         <div class="cardHeader">
           <div>
             <h1>Create Fixed Asset</h1>
@@ -27,7 +29,6 @@
 
         <form id="assetForm">
           <div class="formGrid">
-
             <div class="field full">
               <label>Asset Name</label>
               <input id="asset_name" required>
@@ -65,7 +66,6 @@
               <label>Salvage Value</label>
               <input type="number" id="salvage_value" value="0">
             </div>
-
           </div>
 
           <div class="actions">
@@ -73,14 +73,13 @@
           </div>
         </form>
 
-        <div id="assetResult" class="result"></div>
+        <div id="assetResult" class="result hidden"></div>
       </div>
     </section>
 
     <!-- EXPENSES SECTION -->
     <section id="expensesSection" class="section hidden">
       <div class="card">
-
         <div class="cardHeader">
           <div>
             <h1>Create Expense</h1>
@@ -105,19 +104,13 @@
             </div>
 
             <div class="field">
-              <label>Expense Account</label>
-              <select id="exp_account_id" required>
-                <option value="">Select expense account</option>
-                <option value="5571826000000000427">IT and Internet Expenses</option>
-              </select>
+              <label>Expense Account ID</label>
+              <input id="exp_account_id" placeholder="Paste Zoho account_id" required>
             </div>
 
             <div class="field">
-              <label>Paid Through</label>
-              <select id="exp_paid_through_account_id" required>
-                <option value="">Select paid through</option>
-                <option value="5571826000000908003">Cash Valut - C</option>
-              </select>
+              <label>Paid Through Account ID</label>
+              <input id="exp_paid_through_account_id" placeholder="Paste Zoho paid_through_account_id" required>
             </div>
 
             <div class="field full">
@@ -126,7 +119,7 @@
             </div>
 
             <div class="field full">
-              <label>Vendor</label>
+              <label>Vendor (optional)</label>
               <select id="exp_vendor_id">
                 <option value="">No vendor</option>
               </select>
@@ -155,7 +148,7 @@
           </select>
         </div>
 
-        <div id="expenseResult" class="result"></div>
+        <div id="expenseResult" class="result hidden"></div>
 
         <div id="expenseTableWrap" class="tableWrap hidden">
           <table class="table" id="expenseTable">
@@ -178,7 +171,6 @@
 
         <!-- Hidden file input for table attach -->
         <input type="file" id="receiptFile" class="hidden" accept="image/*,application/pdf">
-
       </div>
     </section>
 
@@ -213,6 +205,13 @@
       const dd = String(d.getDate()).padStart(2, "0");
       inputEl.value = `${yyyy}-${mm}-${dd}`;
     }
+  }
+
+  function showResult(el, type, text) {
+    el.classList.remove("hidden");
+    el.classList.remove("success", "error");
+    if (type) el.classList.add(type);
+    el.textContent = text;
   }
 
   // Navigation
@@ -251,7 +250,7 @@
     e.preventDefault();
     assetBtn.disabled = true;
     assetBtn.textContent = "Creating…";
-    assetResult.style.display = "none";
+    assetResult.classList.add("hidden");
 
     const payload = {
       asset_name: asset_name.value,
@@ -271,18 +270,15 @@
       });
       const data = await res.json();
       if (data.ok) {
-        assetResult.className = "result success";
-        assetResult.textContent = `Asset created successfully (Asset No: ${data.asset_number})`;
+        showResult(assetResult, "success", `Asset created successfully (Asset No: ${data.asset_number})`);
         assetForm.reset();
       } else {
         throw new Error(JSON.stringify(data, null, 2));
       }
     } catch {
-      assetResult.className = "result error";
-      assetResult.textContent = "Failed to create asset. Please check inputs.";
+      showResult(assetResult, "error", "Failed to create asset. Please check inputs.");
     }
 
-    assetResult.style.display = "block";
     assetBtn.disabled = false;
     assetBtn.textContent = "Create Asset";
   });
@@ -300,8 +296,8 @@
       sel.innerHTML = `<option value="">No vendor</option>`;
       (out.vendors || []).forEach(v => {
         const opt = document.createElement("option");
-        opt.value = v.contact_id || v.vendor_id || "";
-        opt.textContent = v.contact_name || v.vendor_name || v.contact_id || v.vendor_id;
+        opt.value = v.contact_id || "";
+        opt.textContent = v.contact_name || v.contact_id || "";
         sel.appendChild(opt);
       });
     } catch {
@@ -309,30 +305,17 @@
     }
   }
 
-  // Receipts (table attach + open)
+  // Receipt helpers
   const receiptFile = document.getElementById("receiptFile");
 
-  async function pickAndUploadReceipt(expenseId) {
-    receiptFile.value = "";
-    receiptFile.onchange = async () => {
-      const file = receiptFile.files && receiptFile.files[0];
-      if (!file) return;
-      await uploadReceipt(expenseId, file);
-    };
-    receiptFile.click();
-  }
-
-  async function uploadReceipt(expenseId, file) {
-    expenseResult.style.display = "none";
-
+  async function uploadReceipt(expenseId, file, reportNoNullable) {
     const fd = new FormData();
     fd.append("receipt", file);
 
-    const res = await fetch(`/expenses/${encodeURIComponent(expenseId)}/receipt`, {
-      method: "POST",
-      body: fd
-    });
+    const url = `/expenses/${encodeURIComponent(expenseId)}/receipt` +
+                (reportNoNullable ? `?report_no=${encodeURIComponent(reportNoNullable)}` : "");
 
+    const res = await fetch(url, { method: "POST", body: fd });
     const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
@@ -341,14 +324,35 @@
       const err = data?.detail ?? data;
       throw new Error(typeof err === "string" ? err : JSON.stringify(err, null, 2));
     }
+
     return data;
+  }
+
+  async function pickAndUploadReceipt(expenseId) {
+    receiptFile.value = "";
+    receiptFile.onchange = async () => {
+      const file = receiptFile.files && receiptFile.files[0];
+      if (!file) return;
+
+      // Fetch expense to obtain cf_expense_report for correct rename
+      let reportNo = null;
+      try {
+        const r = await fetch("/expenses/by-id/" + encodeURIComponent(expenseId));
+        const d = await r.json();
+        reportNo = (d?.expense?.custom_field_hash?.cf_expense_report) || null;
+      } catch {}
+
+      await uploadReceipt(expenseId, file, reportNo);
+      showResult(expenseResult, "success", "Receipt uploaded.");
+    };
+    receiptFile.click();
   }
 
   function openReceipt(expenseId) {
     window.open(`/expenses/${encodeURIComponent(expenseId)}/receipt`, "_blank");
   }
 
-  // Expenses form
+  // Expenses
   const expenseForm = document.getElementById("expenseForm");
   const expenseResult = document.getElementById("expenseResult");
   const expenseBtn = document.getElementById("expenseSubmitBtn");
@@ -362,7 +366,7 @@
     e.preventDefault();
     expenseBtn.disabled = true;
     expenseBtn.textContent = "Creating…";
-    expenseResult.style.display = "none";
+    expenseResult.classList.add("hidden");
     expenseDetails.classList.add("hidden");
 
     const payload = {
@@ -371,6 +375,7 @@
       paid_through_account_id: exp_paid_through_account_id.value.trim(),
       amount: Number(exp_amount.value),
     };
+
     if (exp_description.value.trim()) payload.description = exp_description.value.trim();
     if (exp_vendor_id.value.trim()) payload.vendor_id = exp_vendor_id.value.trim();
 
@@ -387,18 +392,23 @@
       }
 
       const expenseId = out.expense_id;
-      const reportNo = out.expense_report_no;
+      const reportNo = out.expense_report_no; // may be null if flow is still processing
 
-      // If receipt chosen, upload immediately
       const file = expReceipt.files && expReceipt.files[0];
       if (file) {
         expenseBtn.textContent = "Uploading receipt…";
-        await uploadReceipt(expenseId, file);
-        expenseResult.className = "result success";
-        expenseResult.textContent = `Expense created (${reportNo}) and receipt uploaded.`;
+        await uploadReceipt(expenseId, file, reportNo || null);
+        showResult(expenseResult, "success",
+          reportNo
+            ? `Expense created (${reportNo}) and receipt uploaded.`
+            : `Expense created and receipt uploaded. (Report number will appear once Zoho flow completes.)`
+        );
       } else {
-        expenseResult.className = "result success";
-        expenseResult.textContent = `Expense created successfully (${reportNo}).`;
+        showResult(expenseResult, "success",
+          reportNo
+            ? `Expense created successfully. Report No: ${reportNo}`
+            : `Expense created successfully. (Report number will appear once Zoho flow completes.)`
+        );
       }
 
       expenseForm.reset();
@@ -406,18 +416,15 @@
       await loadVendors();
 
     } catch (err) {
-      expenseResult.className = "result error";
-      expenseResult.textContent = "Failed:\n" + (err?.message || String(err));
+      showResult(expenseResult, "error", "Failed:\n" + (err?.message || String(err)));
     }
 
-    expenseResult.style.display = "block";
     expenseBtn.disabled = false;
     expenseBtn.textContent = "Create Expense";
   });
 
-  // List expenses
   async function loadExpenses() {
-    expenseResult.style.display = "none";
+    expenseResult.classList.add("hidden");
     expenseDetails.classList.add("hidden");
     expenseTableWrap.classList.add("hidden");
     expenseTableBody.innerHTML = "";
@@ -434,14 +441,11 @@
     try {
       const res = await fetch("/expenses/list?" + params.toString());
       const out = await res.json();
-
       if (!out.ok) throw new Error("Zoho error");
 
       const list = out.data.expenses || [];
       if (!list.length) {
-        expenseResult.className = "result";
-        expenseResult.textContent = "No expenses found for the selected filter.";
-        expenseResult.style.display = "block";
+        showResult(expenseResult, "", "No expenses found for the selected filter.");
         return;
       }
 
@@ -451,7 +455,7 @@
         const date = x.date || "";
         const amt = (x.total || x.amount || "") + (x.currency_code ? (" " + x.currency_code) : "");
         const status = x.status || "";
-        const desc = x.description || x.reference_number || "";
+        const desc = x.description || "";
         const id = x.expense_id || "";
 
         tr.innerHTML = `
@@ -479,9 +483,7 @@
               if (action === "open") return openReceipt(eid);
               if (action === "upload") return pickAndUploadReceipt(eid);
             } catch (err) {
-              expenseResult.className = "result error";
-              expenseResult.textContent = "Failed:\n" + (err?.message || String(err));
-              expenseResult.style.display = "block";
+              showResult(expenseResult, "error", "Failed:\n" + (err?.message || String(err)));
             }
           });
         });
@@ -491,9 +493,7 @@
 
       expenseTableWrap.classList.remove("hidden");
     } catch {
-      expenseResult.className = "result error";
-      expenseResult.textContent = "Failed to load expenses.";
-      expenseResult.style.display = "block";
+      showResult(expenseResult, "error", "Failed to load expenses.");
     }
   }
 
