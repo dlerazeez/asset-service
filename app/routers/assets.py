@@ -1,9 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
-from app.core.utils import zoho_json
+from fastapi import APIRouter, HTTPException
+from app.core.zoho import zoho_request, zoho_json  # FIXED: import from core.zoho
 
-router = APIRouter()
+router = APIRouter(prefix="/assets", tags=["assets"])
 
-# Fixed Assets (unchanged baseline)
 FIXED_ASSET_TYPE_MAP = {
     "COMPUTERS": {
         "fixed_asset_type_id": "5571826000000132005",
@@ -20,8 +19,8 @@ FIXED_ASSET_TYPE_MAP = {
 }
 
 
-@router.post("/assets/create")
-def create_asset(request: Request, payload: dict):
+@router.post("/create")
+def create_asset(payload: dict):
     required = [
         "asset_name",
         "asset_category",
@@ -57,8 +56,7 @@ def create_asset(request: Request, payload: dict):
         "computation_type": "prorata_basis",
     }
 
-    zoho = request.app.state.zoho
-    resp = zoho.request(
+    resp = zoho_request(
         "POST",
         "/fixedassets",
         json=zoho_payload,
@@ -66,7 +64,6 @@ def create_asset(request: Request, payload: dict):
         timeout=30,
     )
     data = zoho_json(resp)
-
     if data.get("code") != 0:
         raise HTTPException(400, data)
 
@@ -79,15 +76,14 @@ def create_asset(request: Request, payload: dict):
     }
 
 
-@router.get("/assets/all")
-def list_all_assets(request: Request):
-    zoho = request.app.state.zoho
+@router.get("/all")
+def list_all_assets():
     page = 1
     per_page = 200
     all_assets = []
 
     while True:
-        resp = zoho.request(
+        resp = zoho_request(
             "GET",
             "/fixedassets",
             params={"filter_by": "Status.All", "page": page, "per_page": per_page},
@@ -106,8 +102,7 @@ def list_all_assets(request: Request):
     return {"ok": True, "count": len(all_assets), "assets": all_assets}
 
 
-@router.get("/assets/by-id/{asset_id}")
-def get_asset_by_id(request: Request, asset_id: str):
-    zoho = request.app.state.zoho
-    resp = zoho.request("GET", f"/fixedassets/{asset_id}", timeout=30)
+@router.get("/by-id/{asset_id}")
+def get_asset_by_id(asset_id: str):
+    resp = zoho_request("GET", f"/fixedassets/{asset_id}", timeout=30)
     return zoho_json(resp)
