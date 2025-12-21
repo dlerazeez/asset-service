@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Assets & Expenses</title>
-  <link rel="stylesheet" href="/static/style.css?v=10">
+  <link rel="stylesheet" href="/static/style.css?v=20">
 </head>
 <body>
 
@@ -104,13 +104,19 @@
             </div>
 
             <div class="field">
-              <label>Expense Account ID</label>
-              <input id="exp_account_id" placeholder="Paste Zoho account_id" required>
+              <label>Expense Account</label>
+              <select id="exp_account_id" required>
+                <option value="">Loading…</option>
+              </select>
+              <div class="hint" id="exp_account_hint"></div>
             </div>
 
             <div class="field">
-              <label>Paid Through Account ID</label>
-              <input id="exp_paid_through_account_id" placeholder="Paste Zoho paid_through_account_id" required>
+              <label>Paid Through</label>
+              <select id="exp_paid_through_account_id" required>
+                <option value="">Loading…</option>
+              </select>
+              <div class="hint" id="paid_through_hint"></div>
             </div>
 
             <div class="field full">
@@ -169,7 +175,6 @@
 
         <pre id="expenseDetails" class="details hidden"></pre>
 
-        <!-- Hidden file input for table attach -->
         <input type="file" id="receiptFile" class="hidden" accept="image/*,application/pdf">
       </div>
     </section>
@@ -214,6 +219,38 @@
     el.textContent = text;
   }
 
+  function fillSelect(selectEl, accounts, placeholder) {
+    selectEl.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = placeholder || "Select…";
+    selectEl.appendChild(opt0);
+
+    accounts.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.account_id;
+      const code = a.account_code ? `${a.account_code} — ` : "";
+      const cur = a.currency ? ` (${a.currency})` : "";
+      opt.textContent = `${code}${a.account_name}${cur}`;
+      opt.dataset.code = a.account_code || "";
+      opt.dataset.currency = a.currency || "";
+      opt.dataset.type = a.account_type || "";
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function updateHint(selectEl, hintEl) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    if (!opt || !opt.value) {
+      hintEl.textContent = "";
+      return;
+    }
+    const code = opt.dataset.code ? `Code: ${opt.dataset.code}` : "";
+    const type = opt.dataset.type ? `Type: ${opt.dataset.type}` : "";
+    const cur = opt.dataset.currency ? `Currency: ${opt.dataset.currency}` : "";
+    hintEl.textContent = [code, type, cur].filter(Boolean).join(" • ");
+  }
+
   // Navigation
   const assetsSection = document.getElementById("assetsSection");
   const expensesSection = document.getElementById("expensesSection");
@@ -238,7 +275,7 @@
   navExpenses.addEventListener("click", async () => {
     showSection("expenses");
     setTodayIfEmpty(document.getElementById("exp_date"));
-    await loadVendors();
+    await Promise.all([loadCOADropdowns(), loadVendors()]);
   });
 
   // Assets
@@ -283,6 +320,39 @@
     assetBtn.textContent = "Create Asset";
   });
 
+  // COA dropdowns
+  const expAccountSelect = document.getElementById("exp_account_id");
+  const paidThroughSelect = document.getElementById("exp_paid_through_account_id");
+  const expAccountHint = document.getElementById("exp_account_hint");
+  const paidThroughHint = document.getElementById("paid_through_hint");
+
+  expAccountSelect.addEventListener("change", () => updateHint(expAccountSelect, expAccountHint));
+  paidThroughSelect.addEventListener("change", () => updateHint(paidThroughSelect, paidThroughHint));
+
+  async function loadCOADropdowns() {
+    // Expense accounts
+    const r1 = await fetch("/coa/expense-accounts");
+    const d1 = await r1.json();
+    if (d1.ok) {
+      fillSelect(expAccountSelect, d1.accounts, "Select expense account…");
+    } else {
+      expAccountSelect.innerHTML = `<option value="">COA not loaded</option>`;
+      showResult(expenseResult, "error", "COA CSV not loaded on server. Check Chart_of_Accounts.csv and COA_CSV_PATH.");
+    }
+
+    // Paid through accounts
+    const r2 = await fetch("/coa/paid-through-accounts");
+    const d2 = await r2.json();
+    if (d2.ok) {
+      fillSelect(paidThroughSelect, d2.accounts, "Select paid through…");
+    } else {
+      paidThroughSelect.innerHTML = `<option value="">COA not loaded</option>`;
+    }
+
+    updateHint(expAccountSelect, expAccountHint);
+    updateHint(paidThroughSelect, paidThroughHint);
+  }
+
   // Vendors
   async function loadVendors() {
     const sel = document.getElementById("exp_vendor_id");
@@ -307,6 +377,7 @@
 
   // Receipt helpers
   const receiptFile = document.getElementById("receiptFile");
+  const expReceipt = document.getElementById("exp_receipt");
 
   async function uploadReceipt(expenseId, file, reportNoNullable) {
     const fd = new FormData();
@@ -324,7 +395,6 @@
       const err = data?.detail ?? data;
       throw new Error(typeof err === "string" ? err : JSON.stringify(err, null, 2));
     }
-
     return data;
   }
 
@@ -334,7 +404,7 @@
       const file = receiptFile.files && receiptFile.files[0];
       if (!file) return;
 
-      // Fetch expense to obtain cf_expense_report for correct rename
+      // Fetch to ensure we get cf_expense_report for renaming
       let reportNo = null;
       try {
         const r = await fetch("/expenses/by-id/" + encodeURIComponent(expenseId));
@@ -360,7 +430,6 @@
   const expenseTableWrap = document.getElementById("expenseTableWrap");
   const expenseTableBody = document.getElementById("expenseTableBody");
   const expenseDetails = document.getElementById("expenseDetails");
-  const expReceipt = document.getElementById("exp_receipt");
 
   expenseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -371,8 +440,8 @@
 
     const payload = {
       date: exp_date.value,
-      account_id: exp_account_id.value.trim(),
-      paid_through_account_id: exp_paid_through_account_id.value.trim(),
+      account_id: expAccountSelect.value,
+      paid_through_account_id: paidThroughSelect.value,
       amount: Number(exp_amount.value),
     };
 
@@ -392,7 +461,7 @@
       }
 
       const expenseId = out.expense_id;
-      const reportNo = out.expense_report_no; // may be null if flow is still processing
+      const reportNo = out.expense_report_no; // may be null if flow still processing
 
       const file = expReceipt.files && expReceipt.files[0];
       if (file) {
@@ -413,7 +482,7 @@
 
       expenseForm.reset();
       setTodayIfEmpty(document.getElementById("exp_date"));
-      await loadVendors();
+      await Promise.all([loadCOADropdowns(), loadVendors()]);
 
     } catch (err) {
       showResult(expenseResult, "error", "Failed:\n" + (err?.message || String(err)));
