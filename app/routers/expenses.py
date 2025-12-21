@@ -22,9 +22,14 @@ def create_expense(request: Request, payload: dict):
         "paid_through_account_id": str(payload["paid_through_account_id"]).strip(),
         "amount": float(payload["amount"]),
     }
-
-    if payload.get("description"):
-        zoho_payload["description"] = payload["description"]
+# UI calls it "notes", Zoho field is "description"
+notes = payload.get("notes") or payload.get("description")
+if isinstance(notes, str) and notes.strip():
+    zoho_payload["description"] = notes.strip()[:100]  # Zoho max length 100
+# Reference field (Zoho uses reference_number)
+ref = payload.get("reference_number") or payload.get("reference")
+if isinstance(ref, str) and ref.strip():
+    zoho_payload["reference_number"] = ref.strip()[:100]  # Zoho max length 100
     if payload.get("vendor_id"):
         zoho_payload["vendor_id"] = payload["vendor_id"]
 
