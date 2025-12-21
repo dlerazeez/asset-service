@@ -1,114 +1,382 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Fixed Asset Entry</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <title>Assets & Expenses</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div class="page">
-    <div class="card">
+<div class="layout">
+
+  <!-- Main content -->
+  <div class="content">
+
+    <!-- ASSETS SECTION -->
+    <section id="assetsSection" class="section">
+      <div class="card">
         <h1>Create Fixed Asset</h1>
-        <div class="subtitle">
-            Draft asset will be created in Zoho Books
-        </div>
+        <div class="subtitle">Draft asset will be created in Zoho Books</div>
 
         <form id="assetForm">
+          <div class="field">
+            <label>Asset Name</label>
+            <input id="asset_name" required>
+          </div>
 
-            <div class="field">
-                <label>Asset Name</label>
-                <input id="asset_name" required>
-            </div>
+          <div class="field">
+            <label>Asset Category</label>
+            <select id="asset_category" required>
+              <option value="COMPUTERS">Computers & Electronics</option>
+              <option value="FURNITURE">Furniture & Equipment</option>
+            </select>
+          </div>
 
-            <div class="field">
-                <label>Asset Category</label>
-                <select id="asset_category" required>
-                    <option value="COMPUTERS">Computers & Electronics</option>
-                    <option value="FURNITURE">Furniture & Equipment</option>
-                </select>
-            </div>
+          <div class="field">
+            <label>Purchase Cost</label>
+            <input type="number" id="asset_cost" required>
+          </div>
 
-            <div class="field">
-                <label>Purchase Cost</label>
-                <input type="number" id="asset_cost" required>
-            </div>
+          <div class="field">
+            <label>Purchase Date</label>
+            <input type="date" id="purchase_date" required>
+          </div>
 
-            <div class="field">
-                <label>Purchase Date</label>
-                <input type="date" id="purchase_date" required>
-            </div>
+          <div class="field">
+            <label>Depreciation Start Date</label>
+            <input type="date" id="depreciation_start_date" required>
+          </div>
 
-            <div class="field">
-                <label>Depreciation Start Date</label>
-                <input type="date" id="depreciation_start_date" required>
-            </div>
+          <div class="field">
+            <label>Useful Life (Months)</label>
+            <input type="number" id="useful_life_months" required>
+          </div>
 
-            <div class="field">
-                <label>Useful Life (Months)</label>
-                <input type="number" id="useful_life_months" required>
-            </div>
+          <div class="field">
+            <label>Salvage Value</label>
+            <input type="number" id="salvage_value" value="0">
+          </div>
 
-            <div class="field">
-                <label>Salvage Value</label>
-                <input type="number" id="salvage_value" value="0">
-            </div>
-
-            <button id="submitBtn" type="submit">
-                Create Asset
-            </button>
+          <button id="assetSubmitBtn" type="submit">Create Asset</button>
         </form>
 
-        <div id="result" class="result"></div>
+        <div id="assetResult" class="result"></div>
+      </div>
+    </section>
+
+    <!-- EXPENSES SECTION -->
+    <section id="expensesSection" class="section hidden">
+      <div class="card">
+        <h1>Create Expense</h1>
+        <div class="subtitle">Expense will be created in Zoho Books</div>
+
+        <form id="expenseForm">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="exp_date" required>
+          </div>
+
+          <div class="field">
+            <label>Account ID (Expense Account)</label>
+            <input id="exp_account_id" placeholder="Paste Zoho expense account_id" required>
+          </div>
+
+          <div class="field">
+            <label>Paid Through Account ID</label>
+            <input id="exp_paid_through_account_id" placeholder="Paste Zoho paid_through_account_id" required>
+          </div>
+
+          <div class="field">
+            <label>Amount</label>
+            <input type="number" step="0.01" id="exp_amount" required>
+          </div>
+
+          <div class="field">
+            <label>Description</label>
+            <input id="exp_description" placeholder="Optional">
+          </div>
+
+          <div class="field">
+            <label>Reference Number</label>
+            <input id="exp_reference_number" placeholder="Optional">
+          </div>
+
+          <div class="field">
+            <label>Vendor ID</label>
+            <input id="exp_vendor_id" placeholder="Optional">
+          </div>
+
+          <button id="expenseSubmitBtn" type="submit">Create Expense</button>
+        </form>
+
+        <div class="row">
+          <button id="expenseListBtn" type="button" class="secondary">List Expenses</button>
+          <input id="expenseSearchText" class="inlineInput" placeholder="Search text (optional)">
+          <select id="expenseFilterBy" class="inlineSelect">
+            <option value="Status.All">Status.All</option>
+            <option value="Status.Unbilled">Status.Unbilled</option>
+            <option value="Status.Billed">Status.Billed</option>
+            <option value="Status.Reimbursed">Status.Reimbursed</option>
+          </select>
+        </div>
+
+        <div id="expenseResult" class="result"></div>
+
+        <div id="expenseTableWrap" class="tableWrap hidden">
+          <table class="table" id="expenseTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Description</th>
+                <th>Expense ID</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="expenseTableBody"></tbody>
+          </table>
+        </div>
+
+        <pre id="expenseDetails" class="details hidden"></pre>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Right sidebar -->
+  <aside class="sidebar">
+    <div class="sidebarCard">
+      <div class="sidebarTitle">Navigation</div>
+      <button id="navAssets" class="navBtn active" type="button">Assets</button>
+      <button id="navExpenses" class="navBtn" type="button">Expenses</button>
     </div>
+  </aside>
+
 </div>
 
 <script>
-const form = document.getElementById("assetForm");
-const result = document.getElementById("result");
-const btn = document.getElementById("submitBtn");
+  // ----------------------------
+  // Navigation
+  // ----------------------------
+  const assetsSection = document.getElementById("assetsSection");
+  const expensesSection = document.getElementById("expensesSection");
+  const navAssets = document.getElementById("navAssets");
+  const navExpenses = document.getElementById("navExpenses");
 
-form.addEventListener("submit", async (e) => {
+  function showSection(which) {
+    if (which === "assets") {
+      assetsSection.classList.remove("hidden");
+      expensesSection.classList.add("hidden");
+      navAssets.classList.add("active");
+      navExpenses.classList.remove("active");
+    } else {
+      expensesSection.classList.remove("hidden");
+      assetsSection.classList.add("hidden");
+      navExpenses.classList.add("active");
+      navAssets.classList.remove("active");
+    }
+  }
+
+  navAssets.addEventListener("click", () => showSection("assets"));
+  navExpenses.addEventListener("click", () => showSection("expenses"));
+
+  // ----------------------------
+  // Assets form
+  // ----------------------------
+  const assetForm = document.getElementById("assetForm");
+  const assetResult = document.getElementById("assetResult");
+  const assetBtn = document.getElementById("assetSubmitBtn");
+
+  assetForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    btn.disabled = true;
-    btn.textContent = "Creating…";
-    result.style.display = "none";
+    assetBtn.disabled = true;
+    assetBtn.textContent = "Creating…";
+    assetResult.style.display = "none";
 
     const payload = {
-        asset_name: asset_name.value,
-        asset_category: asset_category.value,
-        asset_cost: Number(asset_cost.value),
-        purchase_date: purchase_date.value,
-        depreciation_start_date: depreciation_start_date.value,
-        useful_life_months: Number(useful_life_months.value),
-        salvage_value: Number(salvage_value.value)
+      asset_name: asset_name.value,
+      asset_category: asset_category.value,
+      asset_cost: Number(asset_cost.value),
+      purchase_date: purchase_date.value,
+      depreciation_start_date: depreciation_start_date.value,
+      useful_life_months: Number(useful_life_months.value),
+      salvage_value: Number(salvage_value.value)
     };
 
     try {
-        const res = await fetch("/assets/create", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+      const res = await fetch("/assets/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (data.ok) {
-            result.className = "result success";
-            result.textContent = `Asset created successfully (Asset No: ${data.asset_number})`;
-            form.reset();
-        } else {
-            throw new Error("Failed");
-        }
-    } catch {
-        result.className = "result error";
-        result.textContent = "Failed to create asset. Please check inputs.";
+      if (data.ok) {
+        assetResult.className = "result success";
+        assetResult.textContent = `Asset created successfully (Asset No: ${data.asset_number})`;
+        assetForm.reset();
+      } else {
+        throw new Error("Failed");
+      }
+    } catch (err) {
+      assetResult.className = "result error";
+      assetResult.textContent = "Failed to create asset. Please check inputs.";
     }
 
-    result.style.display = "block";
-    btn.disabled = false;
-    btn.textContent = "Create Asset";
-});
+    assetResult.style.display = "block";
+    assetBtn.disabled = false;
+    assetBtn.textContent = "Create Asset";
+  });
+
+  // ----------------------------
+  // Expenses form
+  // ----------------------------
+  const expenseForm = document.getElementById("expenseForm");
+  const expenseResult = document.getElementById("expenseResult");
+  const expenseBtn = document.getElementById("expenseSubmitBtn");
+  const expenseListBtn = document.getElementById("expenseListBtn");
+  const expenseTableWrap = document.getElementById("expenseTableWrap");
+  const expenseTableBody = document.getElementById("expenseTableBody");
+  const expenseDetails = document.getElementById("expenseDetails");
+
+  expenseForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    expenseBtn.disabled = true;
+    expenseBtn.textContent = "Creating…";
+    expenseResult.style.display = "none";
+    expenseDetails.classList.add("hidden");
+
+    const payload = {
+      date: exp_date.value,
+      account_id: exp_account_id.value.trim(),
+      paid_through_account_id: exp_paid_through_account_id.value.trim(),
+      amount: Number(exp_amount.value),
+    };
+
+    if (exp_description.value.trim()) payload.description = exp_description.value.trim();
+    if (exp_reference_number.value.trim()) payload.reference_number = exp_reference_number.value.trim();
+    if (exp_vendor_id.value.trim()) payload.vendor_id = exp_vendor_id.value.trim();
+
+    try {
+      const res = await fetch("/expenses/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        expenseResult.className = "result success";
+        expenseResult.textContent = "Expense created successfully.";
+        expenseForm.reset();
+      } else {
+        throw new Error("Failed");
+      }
+    } catch (err) {
+      expenseResult.className = "result error";
+      expenseResult.textContent = "Failed to create expense. Check your Account IDs and values.";
+    }
+
+    expenseResult.style.display = "block";
+    expenseBtn.disabled = false;
+    expenseBtn.textContent = "Create Expense";
+  });
+
+  // ----------------------------
+  // List expenses + render table
+  // ----------------------------
+  async function loadExpenses() {
+    expenseResult.style.display = "none";
+    expenseDetails.classList.add("hidden");
+    expenseTableWrap.classList.add("hidden");
+    expenseTableBody.innerHTML = "";
+
+    const searchText = document.getElementById("expenseSearchText").value.trim();
+    const filterBy = document.getElementById("expenseFilterBy").value;
+
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("per_page", "50");
+    params.set("filter_by", filterBy);
+    if (searchText) params.set("search_text", searchText);
+
+    try {
+      const res = await fetch("/expenses/list?" + params.toString());
+      const out = await res.json();
+
+      if (!out.ok) throw new Error("Zoho error");
+
+      const list = out.data.expenses || [];
+      if (!list.length) {
+        expenseResult.className = "result";
+        expenseResult.textContent = "No expenses found for the selected filter.";
+        expenseResult.style.display = "block";
+        return;
+      }
+
+      list.forEach((x) => {
+        const tr = document.createElement("tr");
+
+        const date = x.date || "";
+        const amt = (x.total || x.amount || "") + (x.currency_code ? (" " + x.currency_code) : "");
+        const status = x.status || "";
+        const desc = x.description || x.reference_number || "";
+        const id = x.expense_id || "";
+
+        tr.innerHTML = `
+          <td>${escapeHtml(date)}</td>
+          <td>${escapeHtml(String(amt))}</td>
+          <td>${escapeHtml(status)}</td>
+          <td>${escapeHtml(desc)}</td>
+          <td class="mono">${escapeHtml(id)}</td>
+          <td><button class="tiny" data-id="${escapeHtml(id)}">View</button></td>
+        `;
+
+        tr.querySelector("button").addEventListener("click", async () => {
+          await viewExpense(id);
+        });
+
+        expenseTableBody.appendChild(tr);
+      });
+
+      expenseTableWrap.classList.remove("hidden");
+    } catch (err) {
+      expenseResult.className = "result error";
+      expenseResult.textContent = "Failed to load expenses.";
+      expenseResult.style.display = "block";
+    }
+  }
+
+  expenseListBtn.addEventListener("click", loadExpenses);
+
+  // ----------------------------
+  // View expense details
+  // ----------------------------
+  async function viewExpense(expenseId) {
+    expenseDetails.classList.add("hidden");
+    try {
+      const res = await fetch("/expenses/by-id/" + encodeURIComponent(expenseId));
+      const data = await res.json();
+      expenseDetails.textContent = JSON.stringify(data, null, 2);
+      expenseDetails.classList.remove("hidden");
+    } catch {
+      expenseResult.className = "result error";
+      expenseResult.textContent = "Failed to load expense details.";
+      expenseResult.style.display = "block";
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 </script>
 
 </body>
