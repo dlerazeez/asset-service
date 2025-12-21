@@ -6,8 +6,9 @@ from app.core.utils import zoho_json, extract_cf_expense_report, guess_extension
 
 router = APIRouter()
 
-# Expenses (unchanged behavior: do NOT write reference_number)
-
+# -------------------------------------------------
+# Expenses (unchanged behavior except adding notes/reference mapping)
+# -------------------------------------------------
 
 @router.post("/expenses/create")
 def create_expense(request: Request, payload: dict):
@@ -22,14 +23,17 @@ def create_expense(request: Request, payload: dict):
         "paid_through_account_id": str(payload["paid_through_account_id"]).strip(),
         "amount": float(payload["amount"]),
     }
-# UI calls it "notes", Zoho field is "description"
-notes = payload.get("notes") or payload.get("description")
-if isinstance(notes, str) and notes.strip():
-    zoho_payload["description"] = notes.strip()[:100]  # Zoho max length 100
-# Reference field (Zoho uses reference_number)
-ref = payload.get("reference_number") or payload.get("reference")
-if isinstance(ref, str) and ref.strip():
-    zoho_payload["reference_number"] = ref.strip()[:100]  # Zoho max length 100
+
+    # Notes (UI) -> description (Zoho)
+    notes = payload.get("notes") or payload.get("description")
+    if isinstance(notes, str) and notes.strip():
+        zoho_payload["description"] = notes.strip()[:100]  # Zoho max length is 100
+
+    # Reference (UI) -> reference_number (Zoho)
+    ref = payload.get("reference_number") or payload.get("reference")
+    if isinstance(ref, str) and ref.strip():
+        zoho_payload["reference_number"] = ref.strip()[:100]  # Zoho max length is 100
+
     if payload.get("vendor_id"):
         zoho_payload["vendor_id"] = payload["vendor_id"]
 
@@ -132,7 +136,13 @@ def upload_expense_receipt(
     if resp.status_code >= 400:
         return JSONResponse(status_code=resp.status_code, content=data)
 
-    return {"ok": True, "expense_id": expense_id, "expense_report_no": report_no, "filename": new_filename, "zoho": data}
+    return {
+        "ok": True,
+        "expense_id": expense_id,
+        "expense_report_no": report_no,
+        "filename": new_filename,
+        "zoho": data,
+    }
 
 
 @router.get("/expenses/{expense_id}/receipt")
