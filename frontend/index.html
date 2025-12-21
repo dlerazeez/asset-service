@@ -118,7 +118,11 @@
               </select>
               <div class="hint" id="paid_through_hint"></div>
             </div>
-
+            
+<div class="field full">
+  <label>Reference</label>
+  <input id="exp_reference" placeholder="Optional">
+</div>
             <div class="field full">
               <label>Notes</label>
               <input id="exp_description" placeholder="Optional">
@@ -444,8 +448,9 @@
       paid_through_account_id: paidThroughSelect.value,
       amount: Number(exp_amount.value),
     };
-
-    if (exp_description.value.trim()) payload.description = exp_description.value.trim();
+    
+if (exp_description.value.trim()) payload.notes = exp_description.value.trim();
+if (exp_reference.value.trim()) payload.reference_number = exp_reference.value.trim();
     if (exp_vendor_id.value.trim()) payload.vendor_id = exp_vendor_id.value.trim();
 
     try {
