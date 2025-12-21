@@ -63,19 +63,11 @@ body {
   }
 }
 
-/* Blank home area */
-.blank {
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-  min-height: 320px;
-}
-
 /* Card */
 .card {
   width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
+  max-width: 1100px;
+  margin: 0;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -117,7 +109,6 @@ h1 {
   margin: 16px 0 18px 0;
 }
 
-/* Sections */
 .section { padding: 0; }
 
 /* Forms */
@@ -160,7 +151,6 @@ input:focus, select:focus {
 }
 
 input::placeholder { color: #9ca3af; }
-input[type="file"] { padding: 10px 12px; }
 
 .hint {
   font-size: 12px;
@@ -181,7 +171,10 @@ button {
   transition: opacity 120ms ease;
 }
 
-button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .primary {
   width: 100%;
@@ -233,14 +226,21 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Row controls */
 .row {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   gap: 10px;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.inlineField { min-width: 180px; }
+.inlineInput {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
 
 /* Table */
 .tableWrap {
@@ -272,6 +272,19 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .table tbody tr:last-child td { border-bottom: none; }
+
+.details {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e5e7eb;
+  overflow: auto;
+  max-height: 420px;
+  font-size: 12px;
+  line-height: 1.5;
+}
 
 /* Sidebar */
 .sidebarCard {
@@ -310,68 +323,18 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   background: var(--secondaryBg);
 }
 
-/* Tabs inside Expenses */
-.moduleTabs {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
+/* Panels */
+.panel {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
-.tabBtn {
-  background: #fff;
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 10px 12px;
+.panelTitle {
   font-size: 13px;
-  font-weight: 800;
-}
-
-.tabBtn.active {
-  border-color: rgba(17, 24, 39, 0.45);
-  background: var(--secondaryBg);
-}
-
-.panel { padding-top: 6px; }
-
-/* Modal */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(17,24,39,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  z-index: 1000;
-}
-
-.modalCard {
-  width: 100%;
-  max-width: 860px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  padding: 18px;
-}
-
-.modalHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.modalTitle {
-  font-size: 16px;
   font-weight: 900;
-  margin: 0;
-}
-
-.modalSub {
-  font-size: 12px;
   color: var(--muted);
-  margin-top: 4px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
