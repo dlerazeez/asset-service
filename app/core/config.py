@@ -1,28 +1,34 @@
-from dotenv import load_dotenv
-from pathlib import Path
+from dataclasses import dataclass
 import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
-ZOHO_ORG_ID = os.getenv("ZOHO_ORG_ID", "868880872")
-ZOHO_BASE = os.getenv("ZOHO_BASE", "https://www.zohoapis.com/books/v3")
-ZOHO_AUTH_URL = os.getenv("ZOHO_AUTH_URL", "https://accounts.zoho.com/oauth/v2/token")
 
-ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
-ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
-ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
+@dataclass
+class Settings:
+    base_dir: str
 
-# Expense report custom field API name (your config)
-EXPENSE_CF_API_NAME = "cf_expense_report"
+    def __post_init__(self):
+        self.zoho_org_id = os.getenv("ZOHO_ORG_ID", "868880872")
+        self.zoho_base = os.getenv("ZOHO_BASE", "https://www.zohoapis.com/books/v3")
+        self.zoho_auth_url = os.getenv("ZOHO_AUTH_URL", "https://accounts.zoho.com/oauth/v2/token")
 
-BASE_DIR = Path(__file__).resolve().parents[2]  # project root
-COA_CSV_PATH = Path(os.getenv("COA_CSV_PATH", str(BASE_DIR / "Chart_of_Accounts.csv")))
+        self.zoho_client_id = os.getenv("ZOHO_CLIENT_ID")
+        self.zoho_client_secret = os.getenv("ZOHO_CLIENT_SECRET")
+        self.zoho_refresh_token = os.getenv("ZOHO_REFRESH_TOKEN")
 
-# Pending DB + uploads
-DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data")))
-PENDING_DB_PATH = Path(os.getenv("PENDING_DB_PATH", str(DATA_DIR / "pending.db")))
-PENDING_UPLOADS_DIR = Path(os.getenv("PENDING_UPLOADS_DIR", str(DATA_DIR / "uploads")))
+        # Expense report custom field API name
+        self.expense_cf_api_name = os.getenv("EXPENSE_CF_API_NAME", "cf_expense_report")
 
-def validate_env():
-    if not all([ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN]):
-        raise RuntimeError("Missing Zoho OAuth environment variables (ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN)")
+        # Paths
+        self.frontend_dir = os.path.join(self.base_dir, "frontend")
+        self.coa_csv_path = os.getenv("COA_CSV_PATH", os.path.join(self.base_dir, "Chart_of_Accounts.csv"))
+
+        self.storage_dir = os.path.join(self.base_dir, "storage")
+        os.makedirs(self.storage_dir, exist_ok=True)
+
+        self.pending_db_path = os.path.join(self.storage_dir, "pending.sqlite")
+
+        if not all([self.zoho_client_id, self.zoho_client_secret, self.zoho_refresh_token]):
+            raise RuntimeError("Missing Zoho OAuth environment variables (ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN)")
