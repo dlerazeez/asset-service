@@ -1,12 +1,13 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Header, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import requests
 import os
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
+
 
 # -------------------------------------------------
 # Load environment variables
@@ -22,13 +23,14 @@ ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
 
 if not all([ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN]):
-    raise RuntimeError("Missing Zoho OAuth environment variables")
+    raise RuntimeError("Missing Zoho OAuth environment variables (ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN)")
+
 
 # -------------------------------------------------
 # OAuth token cache (in-memory)
 # -------------------------------------------------
 _access_token: Optional[str] = None
-_token_expiry: float = 0.0
+_token_expiry: float = 0
 
 
 def get_access_token() -> str:
@@ -45,18 +47,23 @@ def get_access_token() -> str:
             "client_secret": ZOHO_CLIENT_SECRET,
             "refresh_token": ZOHO_REFRESH_TOKEN,
         },
-        timeout=15,
+        timeout=20,
     )
 
     data = resp.json()
-
     if "access_token" not in data:
         raise RuntimeError(f"Failed to refresh Zoho token: {data}")
 
     _access_token = data["access_token"]
     _token_expiry = time.time() + int(data.get("expires_in", 3600)) - 60
-
     return _access_token
+
+
+def zoho_headers(extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    h = {"Authorization": f"Zoho-oauthtoken {get_access_token()}"}
+    if extra:
+        h.update(extra)
+    return h
 
 
 def zoho_request(
@@ -65,50 +72,40 @@ def zoho_request(
     *,
     params: Optional[Dict[str, Any]] = None,
     json: Optional[Dict[str, Any]] = None,
+    data: Optional[Dict[str, Any]] = None,
     files: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, str]] = None,
     timeout: int = 30,
-) -> requests.Response:
-    token = get_access_token()
-
-    base_headers = {"Authorization": f"Zoho-oauthtoken {token}"}
-    if headers:
-        base_headers.update(headers)
-
-    q = {"organization_id": ZOHO_ORG_ID}
-    if params:
-        # Do not allow overriding org_id from caller
-        params = dict(params)
-        params.pop("organization_id", None)
-        q.update(params)
+):
+    p = params.copy() if params else {}
+    p["organization_id"] = ZOHO_ORG_ID
 
     url = f"{ZOHO_BASE}{path}"
+    hdrs = zoho_headers(headers)
+
     return requests.request(
-        method=method,
+        method=method.upper(),
         url=url,
-        params=q,
+        params=p,
         json=json,
+        data=data,
         files=files,
-        headers=base_headers,
+        headers=hdrs,
         timeout=timeout,
     )
 
 
-def zoho_json_or_file(resp: requests.Response):
-    """
-    Some Zoho endpoints return JSON; others may return a file (receipt).
-    This helper returns JSON when possible, otherwise returns raw file bytes.
-    """
-    content_type = (resp.headers.get("Content-Type") or "").lower()
-    if "application/json" in content_type or "text/json" in content_type:
+def zoho_json_or_text(resp: requests.Response) -> Any:
+    try:
         return resp.json()
-    return Response(content=resp.content, media_type=resp.headers.get("Content-Type", "application/octet-stream"))
+    except Exception:
+        return {"raw": resp.text}
 
 
 # -------------------------------------------------
 # FastAPI app
 # -------------------------------------------------
-app = FastAPI(title="Fixed Asset & Expense Service")
+app = FastAPI(title="Laveen Assets & Expenses Service")
 
 app.add_middleware(
     CORSMiddleware,
@@ -117,7 +114,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static frontend
+# Serve frontend folder as /static (contains style.css)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 
@@ -125,6 +122,12 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 def serve_frontend():
     with open("frontend/index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+
+@app.get("/favicon.ico")
+def favicon():
+    # Avoid noisy 404 logs
+    return Response(status_code=204)
 
 
 # -------------------------------------------------
@@ -147,7 +150,7 @@ FIXED_ASSET_TYPE_MAP = {
 
 
 # -------------------------------------------------
-# Assets APIs
+# Create Fixed Asset (Draft)
 # -------------------------------------------------
 @app.post("/assets/create")
 def create_asset(payload: dict):
@@ -192,23 +195,20 @@ def create_asset(payload: dict):
         "/fixedassets",
         json=zoho_payload,
         headers={"Content-Type": "application/json"},
+        timeout=30,
     )
 
-    data = resp.json()
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400 or (isinstance(data, dict) and data.get("code") not in (0, None)):
+        raise HTTPException(status_code=400, detail=data)
 
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-
-    fa = data["fixed_asset"]
-
-    return {
-        "ok": True,
-        "fixed_asset_id": fa["fixed_asset_id"],
-        "asset_number": fa["asset_number"],
-        "status": fa["status"],
-    }
+    fa = data.get("fixed_asset", {})
+    return {"ok": True, "fixed_asset_id": fa.get("fixed_asset_id"), "asset_number": fa.get("asset_number"), "status": fa.get("status")}
 
 
+# -------------------------------------------------
+# Retrieve ALL Fixed Assets (Draft + Active + Others)
+# -------------------------------------------------
 @app.get("/assets/all")
 def list_all_assets():
     page = 1
@@ -219,24 +219,18 @@ def list_all_assets():
         resp = zoho_request(
             "GET",
             "/fixedassets",
-            params={
-                "filter_by": "Status.All",
-                "page": page,
-                "per_page": per_page,
-            },
+            params={"filter_by": "Status.All", "page": page, "per_page": per_page},
+            timeout=30,
         )
+        data = zoho_json_or_text(resp)
 
-        data = resp.json()
-
-        if data.get("code") != 0:
-            raise HTTPException(400, data)
+        if resp.status_code >= 400 or (isinstance(data, dict) and data.get("code") != 0):
+            raise HTTPException(status_code=400, detail=data)
 
         all_assets.extend(data.get("fixed_assets", []))
-
         page_context = data.get("page_context", {})
         if not page_context.get("has_more_page"):
             break
-
         page += 1
 
     return {"ok": True, "count": len(all_assets), "assets": all_assets}
@@ -244,23 +238,26 @@ def list_all_assets():
 
 @app.get("/assets/by-id/{asset_id}")
 def get_asset_by_id(asset_id: str):
-    resp = zoho_request("GET", f"/fixedassets/{asset_id}")
-    return resp.json()
+    resp = zoho_request("GET", f"/fixedassets/{asset_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=400, detail=data)
+    return data
 
 
-# -------------------------------------------------
-# Expenses APIs (based on expenses.yml)
-# -------------------------------------------------
+# =================================================
+# EXPENSES (Full API proxy + UI-friendly aliases)
+# =================================================
 
-# Create Expense (required fields: date, account_id, amount, paid_through_account_id)
+# --- UI-friendly endpoints (your frontend uses these) ---
+
 @app.post("/expenses/create")
-def create_expense(payload: dict):
+def create_expense_ui(payload: dict):
     required = ["date", "account_id", "amount", "paid_through_account_id"]
     missing = [f for f in required if f not in payload]
     if missing:
         raise HTTPException(status_code=400, detail={"error": "Missing fields", "missing": missing})
 
-    # Guard against empty strings coming from the UI
     for k in ["account_id", "paid_through_account_id"]:
         if str(payload.get(k, "")).strip() == "":
             raise HTTPException(status_code=400, detail={"error": f"{k} is empty"})
@@ -270,231 +267,256 @@ def create_expense(payload: dict):
         "/expenses",
         json=payload,
         headers={"Content-Type": "application/json"},
+        timeout=30,
     )
 
-    # Always try to capture Zoho payload
-    try:
-        data = resp.json()
-    except Exception:
-        data = {"raw": resp.text}
-
-    # Log full detail in Render logs
-
-    # If Zoho returns non-200
-    if resp.status_code >= 400:
-        raise HTTPException(
-            status_code=400,
-            detail={"zoho_http_status": resp.status_code, "zoho": data},
-        )
-
-    # If Zoho returns code != 0
-    if isinstance(data, dict) and data.get("code") != 0:
-        raise HTTPException(
-            status_code=400,
-            detail={"zoho_http_status": resp.status_code, "zoho": data},
-        )
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400 or (isinstance(data, dict) and data.get("code") != 0):
+        raise HTTPException(status_code=400, detail=data)
 
     return {"ok": True, "data": data}
 
 
-
-# List Expenses (pass-through all query params you send from UI)
 @app.get("/expenses/list")
-def list_expenses(request: Request):
-    # Forward whatever filters you provide (page/per_page/search_text/filter_by/sort_column/etc.)
-    params = dict(request.query_params)
+def list_expenses_ui(
+    page: int = 1,
+    per_page: int = 50,
+    filter_by: str = "Status.All",
+    search_text: str = "",
+):
+    params = {"page": page, "per_page": per_page, "filter_by": filter_by}
+    if search_text.strip():
+        params["search_text"] = search_text.strip()
 
-    resp = zoho_request("GET", "/expenses", params=params)
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
+    resp = zoho_request("GET", "/expenses", params=params, timeout=30)
+    data = zoho_json_or_text(resp)
+
+    if resp.status_code >= 400 or (isinstance(data, dict) and data.get("code") != 0):
+        raise HTTPException(status_code=400, detail=data)
 
     return {"ok": True, "data": data}
 
 
-# Get Expense by ID
 @app.get("/expenses/by-id/{expense_id}")
-def get_expense_by_id(expense_id: str):
-    resp = zoho_request("GET", f"/expenses/{expense_id}")
-    return resp.json()
+def get_expense_by_id_ui(expense_id: str):
+    resp = zoho_request("GET", f"/expenses/{expense_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=400, detail=data)
+
+    return data
 
 
-# Update Expense by ID (supports delete_receipt query param)
-@app.put("/expenses/update/{expense_id}")
-def update_expense(expense_id: str, payload: dict, delete_receipt: bool = False):
-    resp = zoho_request(
-        "PUT",
-        f"/expenses/{expense_id}",
-        params={"delete_receipt": str(delete_receipt).lower()},
-        json=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+# --- OpenAPI-spec-aligned endpoints from your expenses.yml ---
+
+@app.get("/expenses")
+def list_expenses(
+    page: int = 1,
+    per_page: int = 50,
+    filter_by: str = "Status.All",
+    search_text: str = "",
+    sort_column: str = "",
+    sort_order: str = "",
+):
+    params = {"page": page, "per_page": per_page, "filter_by": filter_by}
+    if search_text.strip():
+        params["search_text"] = search_text.strip()
+    if sort_column.strip():
+        params["sort_column"] = sort_column.strip()
+    if sort_order.strip():
+        params["sort_order"] = sort_order.strip()
+
+    resp = zoho_request("GET", "/expenses", params=params, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
-# Delete Expense by ID
-@app.delete("/expenses/delete/{expense_id}")
+@app.post("/expenses")
+def create_expense(payload: dict):
+    resp = zoho_request("POST", "/expenses", json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.put("/expenses")
+def update_expense_by_custom_field(payload: dict):
+    # Zoho supports PUT /expenses for update by custom field unique value in some flows.
+    resp = zoho_request("PUT", "/expenses", json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.get("/expenses/{expense_id}")
+def get_expense(expense_id: str):
+    resp = zoho_request("GET", f"/expenses/{expense_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.put("/expenses/{expense_id}")
+def update_expense(expense_id: str, payload: dict):
+    resp = zoho_request("PUT", f"/expenses/{expense_id}", json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.delete("/expenses/{expense_id}")
 def delete_expense(expense_id: str):
-    resp = zoho_request("DELETE", f"/expenses/{expense_id}")
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+    resp = zoho_request("DELETE", f"/expenses/{expense_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
-# Comments/History
 @app.get("/expenses/{expense_id}/comments")
-def list_expense_comments(expense_id: str):
-    resp = zoho_request("GET", f"/expenses/{expense_id}/comments")
-    return resp.json()
+def get_expense_comments(expense_id: str):
+    resp = zoho_request("GET", f"/expenses/{expense_id}/comments", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
-# Receipt endpoints
 @app.get("/expenses/{expense_id}/receipt")
-def get_expense_receipt(expense_id: str, preview: bool = False):
-    resp = zoho_request(
-        "GET",
-        f"/expenses/{expense_id}/receipt",
-        params={"preview": str(preview).lower()},
-    )
-    return zoho_json_or_file(resp)
+def get_expense_receipt(expense_id: str):
+    # Zoho may return the receipt file stream. We pass through content.
+    resp = zoho_request("GET", f"/expenses/{expense_id}/receipt", timeout=30)
+    if resp.status_code >= 400:
+        data = zoho_json_or_text(resp)
+        return JSONResponse(status_code=resp.status_code, content=data)
+
+    content_type = resp.headers.get("Content-Type", "application/octet-stream")
+    return Response(content=resp.content, media_type=content_type)
 
 
 @app.post("/expenses/{expense_id}/receipt")
-def add_expense_receipt(expense_id: str, receipt: UploadFile = File(...)):
-    files = {"receipt": (receipt.filename, receipt.file, receipt.content_type)}
-    resp = zoho_request("POST", f"/expenses/{expense_id}/receipt", files=files)
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+def upload_expense_receipt(expense_id: str, receipt: UploadFile = File(...)):
+    files = {
+        "receipt": (receipt.filename, receipt.file, receipt.content_type or "application/octet-stream")
+    }
+    resp = zoho_request("POST", f"/expenses/{expense_id}/receipt", files=files, timeout=60)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
 @app.delete("/expenses/{expense_id}/receipt")
 def delete_expense_receipt(expense_id: str):
-    resp = zoho_request("DELETE", f"/expenses/{expense_id}/receipt")
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+    resp = zoho_request("DELETE", f"/expenses/{expense_id}/receipt", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
-# Attachments (multipart)
 @app.post("/expenses/{expense_id}/attachment")
-def add_expense_attachment(expense_id: str, attachment: UploadFile = File(...)):
-    files = {"attachment": (attachment.filename, attachment.file, attachment.content_type)}
-    resp = zoho_request("POST", f"/expenses/{expense_id}/attachment", files=files)
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
-
-
-# Update Expense by unique custom field (Zoho: PUT /expenses with unique headers)
-@app.put("/expenses/update-by-unique")
-def update_expense_by_unique(
-    payload: dict,
-    x_unique_identifier_key: str = Header(..., alias="X-Unique-Identifier-Key"),
-    x_unique_identifier_value: str = Header(..., alias="X-Unique-Identifier-Value"),
-    x_upsert: Optional[bool] = Header(None, alias="X-Upsert"),
+def add_expense_attachment(
+    expense_id: str,
+    attachment: UploadFile = File(...),
+    totalFiles: int = Form(1),
+    document_ids: List[str] = Form([]),
 ):
-    headers = {
-        "X-Unique-Identifier-Key": x_unique_identifier_key,
-        "X-Unique-Identifier-Value": x_unique_identifier_value,
-        "Content-Type": "application/json",
+    files = {
+        "attachment": (attachment.filename, attachment.file, attachment.content_type or "application/octet-stream")
     }
-    if x_upsert is not None:
-        headers["X-Upsert"] = "true" if x_upsert else "false"
+    form_data = {"totalFiles": str(totalFiles)}
+    # Zoho expects repeated form keys for arrays; requests supports tuples list:
+    data_items = list(form_data.items())
+    for doc_id in document_ids:
+        if str(doc_id).strip():
+            data_items.append(("document_ids", str(doc_id).strip()))
 
-    resp = zoho_request("PUT", "/expenses", json=payload, headers=headers)
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
-
-
-# -------------------------------------------------
-# Employees APIs (for mileage workflows)
-# -------------------------------------------------
-@app.get("/employees/list")
-def list_employees(request: Request):
-    params = dict(request.query_params)
-    resp = zoho_request("GET", "/employees", params=params)
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+    resp = zoho_request("POST", f"/expenses/{expense_id}/attachment", data=data_items, files=files, timeout=60)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
 
-@app.post("/employees/create")
-def create_employee(payload: dict):
-    # Zoho expects JSON body with employee fields
-    resp = zoho_request(
-        "POST",
-        "/employees",
-        json=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
+# =================================================
+# EMPLOYEES (from your expenses.yml)
+# =================================================
 
-
-@app.get("/employees/by-id/{employee_id}")
-def get_employee(employee_id: str):
-    resp = zoho_request("GET", f"/employees/{employee_id}")
-    return resp.json()
-
-
-@app.delete("/employees/delete/{employee_id}")
-def delete_employee(employee_id: str):
-    # NOTE: Zoho endpoint is /employee/{employee_id} (singular)
-    resp = zoho_request("DELETE", f"/employee/{employee_id}")
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
-    return {"ok": True, "data": data}
-
-# -------------------------------------------------
-# Vendor List
-# -------------------------------------------------
-
-@app.get("/vendors/list")
-def list_vendors(search_text: str = "", page: int = 1, per_page: int = 200):
-    params = {
-        "organization_id": ZOHO_ORG_ID,
-        "page": page,
-        "per_page": per_page,
-    }
+@app.get("/employees")
+def list_employees(page: int = 1, per_page: int = 200, search_text: str = ""):
+    params = {"page": page, "per_page": per_page}
     if search_text.strip():
         params["search_text"] = search_text.strip()
 
-    # Zoho Books returns contacts; we'll filter to vendors in code to be safe
-    resp = requests.get(
-        f"{ZOHO_BASE}/contacts",
-        params=params,
-        headers={"Authorization": f"Zoho-oauthtoken {get_access_token()}"},
-        timeout=30,
-    )
+    resp = zoho_request("GET", "/employees", params=params, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
 
-    data = resp.json()
-    if data.get("code") != 0:
+
+@app.post("/employees")
+def create_employee(payload: dict):
+    resp = zoho_request("POST", "/employees", json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.get("/employees/{employee_id}")
+def get_employee(employee_id: str):
+    resp = zoho_request("GET", f"/employees/{employee_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+@app.delete("/employee/{employee_id}")
+def delete_employee(employee_id: str):
+    # Note: spec has singular /employee/{employee_id} for delete
+    resp = zoho_request("DELETE", f"/employees/{employee_id}", timeout=30)
+    data = zoho_json_or_text(resp)
+    if resp.status_code >= 400:
+        return JSONResponse(status_code=resp.status_code, content=data)
+    return data
+
+
+# =================================================
+# VENDORS (dropdown support)
+# =================================================
+
+@app.get("/vendors/list")
+def list_vendors(search_text: str = "", page: int = 1, per_page: int = 200):
+    params: Dict[str, Any] = {"page": page, "per_page": per_page}
+    if search_text.strip():
+        params["search_text"] = search_text.strip()
+
+    resp = zoho_request("GET", "/contacts", params=params, timeout=30)
+    data = zoho_json_or_text(resp)
+
+    if resp.status_code >= 400 or (isinstance(data, dict) and data.get("code") != 0):
         raise HTTPException(status_code=400, detail=data)
 
     contacts = data.get("contacts", [])
-
     vendors = []
+
     for c in contacts:
-        # Zoho contact has contact_type / contact_type_formatted depending on org/settings
         t = (c.get("contact_type") or c.get("contact_type_formatted") or "").lower()
-        if "vendor" in t:
+        is_vendor_flag = bool(c.get("is_vendor"))  # sometimes present
+        if is_vendor_flag or ("vendor" in t):
             vendors.append({
                 "vendor_id": c.get("contact_id"),
-                "vendor_name": c.get("contact_name"),
+                "vendor_name": c.get("contact_name") or c.get("company_name") or c.get("contact_id"),
             })
 
     return {"ok": True, "count": len(vendors), "vendors": vendors}
