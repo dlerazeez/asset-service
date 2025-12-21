@@ -258,7 +258,12 @@ def create_expense(payload: dict):
     required = ["date", "account_id", "amount", "paid_through_account_id"]
     missing = [f for f in required if f not in payload]
     if missing:
-        raise HTTPException(400, f"Missing fields: {', '.join(missing)}")
+        raise HTTPException(status_code=400, detail={"error": "Missing fields", "missing": missing})
+
+    # Guard against empty strings coming from the UI
+    for k in ["account_id", "paid_through_account_id"]:
+        if str(payload.get(k, "")).strip() == "":
+            raise HTTPException(status_code=400, detail={"error": f"{k} is empty"})
 
     resp = zoho_request(
         "POST",
@@ -267,11 +272,32 @@ def create_expense(payload: dict):
         headers={"Content-Type": "application/json"},
     )
 
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(400, data)
+    # Always try to capture Zoho payload
+    try:
+        data = resp.json()
+    except Exception:
+        data = {"raw": resp.text}
+
+    # Log full detail in Render logs
+    print("ZOHO /expenses status:", resp.status_code)
+    print("ZOHO /expenses response:", data)
+
+    # If Zoho returns non-200
+    if resp.status_code >= 400:
+        raise HTTPException(
+            status_code=400,
+            detail={"zoho_http_status": resp.status_code, "zoho": data},
+        )
+
+    # If Zoho returns code != 0
+    if isinstance(data, dict) and data.get("code") != 0:
+        raise HTTPException(
+            status_code=400,
+            detail={"zoho_http_status": resp.status_code, "zoho": data},
+        )
 
     return {"ok": True, "data": data}
+
 
 
 # List Expenses (pass-through all query params you send from UI)
