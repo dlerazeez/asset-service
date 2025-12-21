@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import requests
 import os
 import time
+import csv
 
 # -------------------------------------------------
 # Load environment variables
@@ -22,6 +23,9 @@ ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
 
 # Expense report custom field API name (as you specified)
 EXPENSE_CF_API_NAME = "cf_expense_report"
+
+# Chart of Accounts CSV (local source for dropdowns)
+COA_CSV_PATH = os.getenv("COA_CSV_PATH", "Chart_of_Accounts.csv")
 
 if not all([ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN]):
     raise RuntimeError("Missing Zoho OAuth environment variables (ZOHO_CLIENT_ID/ZOHO_CLIENT_SECRET/ZOHO_REFRESH_TOKEN)")
@@ -96,22 +100,15 @@ def zoho_request(method: str, path: str, *, params=None, json=None, files=None, 
 
 
 def extract_cf_expense_report(expense_obj: dict) -> str | None:
-    """
-    Try multiple shapes Zoho might return:
-      - expense.custom_field_hash["cf_expense_report"]
-      - expense.custom_fields[] with api_name == "cf_expense_report"
-    """
     if not expense_obj or not isinstance(expense_obj, dict):
         return None
 
-    # 1) custom_field_hash
     cfh = expense_obj.get("custom_field_hash")
     if isinstance(cfh, dict):
         v = cfh.get(EXPENSE_CF_API_NAME)
         if isinstance(v, str) and v.strip():
             return v.strip()
 
-    # 2) custom_fields array
     cfs = expense_obj.get("custom_fields")
     if isinstance(cfs, list):
         for item in cfs:
@@ -140,6 +137,65 @@ def guess_extension(filename: str | None, content_type: str | None) -> str:
 
 
 # -------------------------------------------------
+# Load COA CSV (for dropdowns)
+# -------------------------------------------------
+_COA_ROWS: list[dict] = []
+_COA_LOAD_ERROR: str | None = None
+
+
+def load_coa_csv():
+    global _COA_ROWS, _COA_LOAD_ERROR
+    _COA_ROWS = []
+    _COA_LOAD_ERROR = None
+
+    if not os.path.exists(COA_CSV_PATH):
+        _COA_LOAD_ERROR = f"COA CSV not found at '{COA_CSV_PATH}'. Put Chart_of_Accounts.csv next to main.py or set COA_CSV_PATH."
+        return
+
+    try:
+        # utf-8-sig handles BOM if present
+        with open(COA_CSV_PATH, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                # Normalize keys we use
+                row = {
+                    "account_id": (r.get("Account ID") or "").strip(),
+                    "account_name": (r.get("Account Name") or "").strip(),
+                    "account_code": str(r.get("Account Code") or "").strip(),
+                    "account_type": (r.get("Account Type") or "").strip(),
+                    "currency": (r.get("Currency") or "").strip(),
+                    "parent_account": (r.get("Parent Account") or "").strip(),
+                    "status": (r.get("Account Status") or "").strip(),
+                }
+                if row["account_id"] and row["account_name"]:
+                    _COA_ROWS.append(row)
+    except Exception as e:
+        _COA_LOAD_ERROR = f"Failed to load COA CSV: {repr(e)}"
+
+
+load_coa_csv()
+
+
+def coa_filter(types: set[str]) -> list[dict]:
+    out = []
+    for r in _COA_ROWS:
+        if r.get("status") and r["status"].lower() not in ("active", ""):
+            continue
+        if r.get("account_type") in types:
+            out.append(r)
+    # Sort by code then name (stable)
+    def sort_key(x):
+        code = x.get("account_code", "")
+        try:
+            code_num = int(float(code)) if code else 10**9
+        except Exception:
+            code_num = 10**9
+        return (code_num, x.get("account_name", ""))
+    out.sort(key=sort_key)
+    return out
+
+
+# -------------------------------------------------
 # FastAPI app
 # -------------------------------------------------
 app = FastAPI(title="Assets & Expenses Service")
@@ -151,7 +207,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static frontend
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 
@@ -163,11 +218,39 @@ def serve_frontend():
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "coa_loaded": _COA_LOAD_ERROR is None, "coa_error": _COA_LOAD_ERROR}
 
 
 # -------------------------------------------------
-# Fixed Assets (unchanged from your baseline)
+# COA endpoints for dropdowns
+# -------------------------------------------------
+@app.get("/coa/expense-accounts")
+def coa_expense_accounts():
+    if _COA_LOAD_ERROR:
+        return {"ok": False, "error": _COA_LOAD_ERROR, "accounts": []}
+    accounts = coa_filter({"Expense", "Other Expense"})
+    return {"ok": True, "count": len(accounts), "accounts": accounts}
+
+
+@app.get("/coa/paid-through-accounts")
+def coa_paid_through_accounts():
+    if _COA_LOAD_ERROR:
+        return {"ok": False, "error": _COA_LOAD_ERROR, "accounts": []}
+    # Paid-through accounts are typically Cash/Bank in Zoho
+    accounts = coa_filter({"Cash", "Bank"})
+    return {"ok": True, "count": len(accounts), "accounts": accounts}
+
+
+@app.post("/coa/reload")
+def coa_reload():
+    load_coa_csv()
+    if _COA_LOAD_ERROR:
+        raise HTTPException(400, _COA_LOAD_ERROR)
+    return {"ok": True, "count": len(_COA_ROWS)}
+
+
+# -------------------------------------------------
+# Fixed Assets (unchanged baseline)
 # -------------------------------------------------
 FIXED_ASSET_TYPE_MAP = {
     "COMPUTERS": {
@@ -271,10 +354,7 @@ def get_asset_by_id(asset_id: str):
 
 
 # -------------------------------------------------
-# Expenses
-# - We DO NOT write reference_number.
-# - Your Zoho flow fills cf_expense_report.
-# - We read it back after create (poll briefly).
+# Expenses (unchanged behavior: do NOT write reference_number)
 # -------------------------------------------------
 @app.post("/expenses/create")
 def create_expense(payload: dict):
@@ -295,7 +375,6 @@ def create_expense(payload: dict):
     if payload.get("vendor_id"):
         zoho_payload["vendor_id"] = payload["vendor_id"]
 
-    # Create expense
     resp = zoho_request(
         "POST",
         "/expenses",
@@ -312,10 +391,9 @@ def create_expense(payload: dict):
     if not expense_id:
         raise HTTPException(400, {"error": "Expense created but expense_id not returned", "zoho": data})
 
-    # Poll to allow Zoho flow to populate cf_expense_report
     report_no = None
     last_get = None
-    for _ in range(10):  # up to ~10 seconds
+    for _ in range(10):
         time.sleep(1)
         r = zoho_request("GET", f"/expenses/{expense_id}", timeout=30)
         last_get = zoho_json(r)
@@ -328,7 +406,7 @@ def create_expense(payload: dict):
     return {
         "ok": True,
         "expense_id": expense_id,
-        "expense_report_no": report_no,  # may be None if flow hasn't populated yet
+        "expense_report_no": report_no,
         "created": data,
         "latest": last_get,
     }
@@ -361,7 +439,6 @@ def upload_expense_receipt(
     receipt: UploadFile = File(...),
     report_no: str | None = Query(default=None),
 ):
-    # If report_no not provided, fetch from Zoho
     if not report_no:
         r = zoho_request("GET", f"/expenses/{expense_id}", timeout=30)
         d = zoho_json(r)
@@ -369,15 +446,12 @@ def upload_expense_receipt(
             exp_obj = d.get("expense") or {}
             report_no = extract_cf_expense_report(exp_obj)
 
-    # Fallback if still missing
     report_no = (report_no or f"EXP{expense_id}").strip()
 
     ext = guess_extension(receipt.filename, receipt.content_type)
     new_filename = f"{report_no}{ext}"
 
-    files = {
-        "receipt": (new_filename, receipt.file, receipt.content_type or "application/octet-stream")
-    }
+    files = {"receipt": (new_filename, receipt.file, receipt.content_type or "application/octet-stream")}
 
     resp = zoho_request("POST", f"/expenses/{expense_id}/receipt", files=files, timeout=90)
     data = zoho_json(resp)
@@ -404,9 +478,6 @@ def delete_expense_receipt(expense_id: str):
     return {"ok": True, "data": data}
 
 
-# -------------------------------------------------
-# Vendors (optional list for dropdown)
-# -------------------------------------------------
 @app.get("/vendors/list")
 def list_vendors(page: int = 1, per_page: int = 200):
     resp = zoho_request(
