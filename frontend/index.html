@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <title>Assets & Expenses</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 
 <div class="layout">
 
-  <!-- Main content -->
   <div class="content">
 
     <!-- ASSETS SECTION -->
@@ -76,7 +75,6 @@
             <input type="date" id="exp_date" required>
           </div>
 
-          <!-- UPDATED: Expense Account dropdown (values are Zoho account_id) -->
           <div class="field">
             <label>Expense Account</label>
             <select id="exp_account_id" required>
@@ -93,7 +91,6 @@
             </select>
           </div>
 
-          <!-- UPDATED: Paid Through dropdown (values are Zoho account_id) -->
           <div class="field">
             <label>Paid Through</label>
             <select id="exp_paid_through_account_id" required>
@@ -123,8 +120,10 @@
           </div>
 
           <div class="field">
-            <label>Vendor ID</label>
-            <input id="exp_vendor_id" placeholder="Optional">
+            <label>Vendor</label>
+            <select id="exp_vendor_id">
+              <option value="">No vendor</option>
+            </select>
           </div>
 
           <button id="expenseSubmitBtn" type="submit">Create Expense</button>
@@ -178,6 +177,28 @@
 
 <script>
   // ----------------------------
+  // Helpers
+  // ----------------------------
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function setTodayIfEmpty(inputEl) {
+    if (!inputEl.value) {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      inputEl.value = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  // ----------------------------
   // Navigation
   // ----------------------------
   const assetsSection = document.getElementById("assetsSection");
@@ -200,7 +221,11 @@
   }
 
   navAssets.addEventListener("click", () => showSection("assets"));
-  navExpenses.addEventListener("click", () => showSection("expenses"));
+  navExpenses.addEventListener("click", async () => {
+    showSection("expenses");
+    setTodayIfEmpty(document.getElementById("exp_date"));
+    await loadVendors();
+  });
 
   // ----------------------------
   // Assets form
@@ -239,7 +264,7 @@
         assetResult.textContent = `Asset created successfully (Asset No: ${data.asset_number})`;
         assetForm.reset();
       } else {
-        throw new Error("Failed");
+        throw new Error(JSON.stringify(data, null, 2));
       }
     } catch (err) {
       assetResult.className = "result error";
@@ -250,6 +275,31 @@
     assetBtn.disabled = false;
     assetBtn.textContent = "Create Asset";
   });
+
+  // ----------------------------
+  // Vendors dropdown
+  // ----------------------------
+  async function loadVendors() {
+    const sel = document.getElementById("exp_vendor_id");
+    sel.innerHTML = `<option value="">Loading…</option>`;
+
+    try {
+      const res = await fetch("/vendors/list?page=1&per_page=200");
+      const out = await res.json();
+
+      if (!out.ok) throw new Error("failed");
+
+      sel.innerHTML = `<option value="">No vendor</option>`;
+      (out.vendors || []).forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.vendor_id;
+        opt.textContent = v.vendor_name || v.vendor_id;
+        sel.appendChild(opt);
+      });
+    } catch {
+      sel.innerHTML = `<option value="">No vendor (failed to load)</option>`;
+    }
+  }
 
   // ----------------------------
   // Expenses form
@@ -287,18 +337,28 @@
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
-      if (data.ok) {
+      if (!res.ok) {
+        const err = data?.detail ?? data;
+        throw new Error(typeof err === "string" ? err : JSON.stringify(err, null, 2));
+      }
+
+      if (data && data.ok) {
         expenseResult.className = "result success";
         expenseResult.textContent = "Expense created successfully.";
         expenseForm.reset();
+        setTodayIfEmpty(document.getElementById("exp_date"));
+        await loadVendors();
       } else {
-        throw new Error("Failed");
+        throw new Error(JSON.stringify(data, null, 2));
       }
+
     } catch (err) {
       expenseResult.className = "result error";
-      expenseResult.textContent = "Failed to create expense. Please check inputs.";
+      expenseResult.textContent = "Failed to create expense:\n" + (err?.message || String(err));
     }
 
     expenseResult.style.display = "block";
@@ -390,14 +450,9 @@
     }
   }
 
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
+  // Default today on first load (Assets screen open)
+  setTodayIfEmpty(document.getElementById("purchase_date"));
+  setTodayIfEmpty(document.getElementById("depreciation_start_date"));
 </script>
 
 </body>
