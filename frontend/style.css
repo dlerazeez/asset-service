@@ -323,6 +323,23 @@ button:disabled {
   background: var(--secondaryBg);
 }
 
+.subnav {
+  margin: -6px 0 12px 0;
+  padding-left: 10px;
+}
+
+.subnav.hidden { display: none; }
+
+.subBtn {
+  padding: 8px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+}
+
+.subnav .subBtn:last-child { margin-bottom: 0; }
+
 /* Panels */
 .panel {
   margin-top: 16px;
