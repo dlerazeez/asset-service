@@ -163,3 +163,26 @@ def zoho_list_expenses(
 def zoho_delete_expense(settings, expense_id: str) -> dict:
     resp = zoho_request(settings, "DELETE", f"/expenses/{expense_id}", timeout=30)
     return zoho_json(resp)
+
+def zoho_list_expense_attachments(settings, expense_id: str) -> dict:
+    """Return list of attachments on an expense.
+
+    Calls zoho_get_expense() and extracts attachments/documents/files list.
+    If the API response is not successful, returns an error dict.
+    """
+    data = zoho_get_expense(settings, expense_id)
+    # Ensure we received a valid dict with code 0
+    if not isinstance(data, dict) or data.get("code") != 0:
+        return data if isinstance(data, dict) else {"code": -1, "message": "Invalid response"}
+
+    exp = data.get("expense") or {}
+    attachments = (
+        exp.get("attachments")
+        or exp.get("documents")
+        or exp.get("files")
+        or []
+    )
+    if not isinstance(attachments, list):
+        attachments = []
+    return {"code": 0, "expense_id": expense_id, "attachments": attachments}
+
