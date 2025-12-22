@@ -134,8 +134,32 @@ def zoho_add_expense_receipt(settings, expense_id: str, filename: str, fileobj, 
     files = {"receipt": (filename, fileobj, content_type or "application/octet-stream")}
     resp = zoho_request(settings, "POST", f"/expenses/{expense_id}/receipt", files=files, timeout=90)
     return zoho_json(resp)
-    
+
+
+def zoho_list_expenses(
+    settings,
+    *,
+    page: int = 1,
+    per_page: int = 200,
+    filter_by: str = "Status.All",
+    search_text: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict:
+    params = {"page": page, "per_page": per_page, "filter_by": filter_by}
+    if search_text:
+        params["search_text"] = search_text
+
+    # Optional date filters (safe to pass; Zoho may ignore if not supported on this endpoint)
+    if date_from:
+        params["date_start"] = date_from
+    if date_to:
+        params["date_end"] = date_to
+
+    resp = zoho_request(settings, "GET", "/expenses", params=params, timeout=30)
+    return zoho_json(resp)
+
+
 def zoho_delete_expense(settings, expense_id: str) -> dict:
     resp = zoho_request(settings, "DELETE", f"/expenses/{expense_id}", timeout=30)
     return zoho_json(resp)
-
