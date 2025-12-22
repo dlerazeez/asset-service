@@ -134,3 +134,8 @@ def zoho_add_expense_receipt(settings, expense_id: str, filename: str, fileobj, 
     files = {"receipt": (filename, fileobj, content_type or "application/octet-stream")}
     resp = zoho_request(settings, "POST", f"/expenses/{expense_id}/receipt", files=files, timeout=90)
     return zoho_json(resp)
+    
+def zoho_delete_expense(settings, expense_id: str) -> dict:
+    resp = zoho_request(settings, "DELETE", f"/expenses/{expense_id}", timeout=30)
+    return zoho_json(resp)
+
