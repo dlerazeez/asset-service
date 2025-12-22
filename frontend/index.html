@@ -14,36 +14,28 @@
 
   <!-- Left sidebar -->
   <aside class="sidebar">
-    <div class="sidebarTop">
-      <div class="logo">Asset Service</div>
-      <div class="small">Zoho Books</div>
+    <div class="sidebarCard">
+      <div class="sidebarTitle">Navigation</div>
+      <button id="navAssets" class="navBtn" type="button">Assets</button>
+      <button id="navExpenses" class="navBtn" type="button">Expenses</button>
     </div>
+  </aside>
 
-    <div class="nav">
-      <button id="navAssets" class="navBtn hidden" type="button">Assets</button>
-      <button id="navExpenses" class="navBtn active" type="button">Expenses</button>
-    </div>
+  <div class="content">
 
-    <div class="navGroup">
-      <div class="groupTitle">Expenses</div>
-      <button id="btnCreateExpense" class="sideBtn" type="button">Create Expense</button>
-      <button id="btnRetrieveExpenses" class="sideBtn" type="button">Retrieve Expenses</button>
-      <button id="btnPendingExpenses" class="sideBtn" type="button">Pending Expenses</button>
-    </div>
-
-    </aside>
-
-  <!-- Main content -->
-  <main class="content">
-
-    <section id="blankSection" class="section hidden">
+    <!-- Blank landing -->
+    <section id="blankSection" class="section">
       <div class="card">
-        <h1>Choose a module</h1>
-        <p class="muted">Select Assets or Expenses from the left.</p>
+        <div class="cardHeader">
+          <div>
+            <h1>Welcome</h1>
+            <div class="subtitle">Select a module from the left navigation.</div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ASSETS SECTION (kept but hidden in nav; safe to ignore) -->
+    <!-- ASSETS SECTION -->
     <section id="assetsSection" class="section hidden">
       <div class="card">
         <div class="cardHeader">
@@ -56,34 +48,49 @@
 
         <div class="hr"></div>
 
-        <form id="assetForm" class="formGrid">
-          <div class="field">
-            <label>Asset Name</label>
-            <input id="asset_name" required />
-          </div>
+        <form id="assetForm">
+          <div class="formGrid">
+            <div class="field full">
+              <label>Asset Name</label>
+              <input id="asset_name" required>
+            </div>
 
-          <div class="field">
-            <label>Purchase Date</label>
-            <input id="purchase_date" type="date" />
-          </div>
+            <div class="field">
+              <label>Asset Category</label>
+              <select id="asset_category" required>
+                <option value="COMPUTERS">Computers & Electronics</option>
+                <option value="FURNITURE">Furniture & Equipment</option>
+              </select>
+            </div>
 
-          <div class="field">
-            <label>Cost</label>
-            <input id="cost" type="number" step="0.01" />
-          </div>
+            <div class="field">
+              <label>Purchase Cost</label>
+              <input type="number" id="asset_cost" required>
+            </div>
 
-          <div class="field">
-            <label>Vendor Name</label>
-            <input id="asset_vendor_name" />
-          </div>
+            <div class="field">
+              <label>Purchase Date</label>
+              <input type="date" id="purchase_date" required>
+            </div>
 
-          <div class="field">
-            <label>Description</label>
-            <textarea id="asset_description" rows="3"></textarea>
+            <div class="field">
+              <label>Depreciation Start Date</label>
+              <input type="date" id="depreciation_start_date" required>
+            </div>
+
+            <div class="field">
+              <label>Useful Life (Months)</label>
+              <input type="number" id="useful_life_months" required>
+            </div>
+
+            <div class="field full">
+              <label>Salvage Value</label>
+              <input type="number" id="salvage_value" value="0">
+            </div>
           </div>
 
           <div class="actions">
-            <button id="assetSubmitBtn" type="submit" class="primary">Create Asset</button>
+            <button id="assetSubmitBtn" class="primary" type="submit">Create Asset</button>
           </div>
         </form>
 
@@ -92,287 +99,157 @@
     </section>
 
     <!-- EXPENSES SECTION -->
-    <section id="expensesSection" class="section">
+    <section id="expensesSection" class="section hidden">
       <div class="card">
         <div class="cardHeader">
           <div>
             <h1>Expenses</h1>
-            <div class="subtitle">Create / Retrieve / Pending (Local)</div>
+            <div class="subtitle">Create pending expenses and manage posted expenses</div>
           </div>
           <div class="badge">Expenses</div>
         </div>
 
         <div class="hr"></div>
 
-        <!-- Tabs inside Expenses -->
-        <div class="tabs">
-          <button id="tabCreate" class="tab active" type="button">Create</button>
-          <button id="tabRetrieve" class="tab" type="button">Retrieve</button>
-          <button id="tabPending" class="tab" type="button">Pending</button>
+        <div class="row">
+          <button id="btnCreateExpense" class="secondary" type="button">Create Expense</button>
+          <button id="btnRetrieveExpenses" class="secondary" type="button">Retrieve Expenses</button>
+          <button id="btnPendingExpenses" class="secondary" type="button">Pending Expenses</button>
         </div>
 
-        <!-- CREATE PANEL -->
-        <div id="panelCreate" class="panel">
-          <form id="expenseForm" class="formGrid">
-            <div class="field">
-              <label>Date</label>
-              <input id="expense_date" type="date" required />
-            </div>
+        <!-- Create Pending Expense -->
+        <div id="panelCreate" class="panel hidden">
+          <div class="panelTitle">Create Pending Expense</div>
 
-            <div class="field">
-              <label>Amount</label>
-              <input id="expense_amount" type="number" step="0.01" required />
-            </div>
+          <form id="pendingExpenseForm">
+            <div class="formGrid">
 
-            <div class="field">
-              <label>Currency</label>
-              <select id="expense_currency">
-                <option value="IQD" selected>IQD</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
+              <div class="field">
+                <label>Date</label>
+                <input type="date" id="exp_date" required>
+              </div>
 
-            <div class="field">
-              <label>Vendor</label>
-              <select id="vendor_id">
-                <option value="">-- Select vendor (optional) --</option>
-              </select>
-              <div class="hint">Loaded from Zoho vendors (Contacts)</div>
-            </div>
+              <div class="field">
+                <label>Amount</label>
+                <input type="number" step="0.01" id="exp_amount" required>
+              </div>
 
-            <div class="field">
-              <label>Vendor Name (manual)</label>
-              <input id="vendor_name" placeholder="Optional" />
-              <div class="hint">If vendor is not in the dropdown, type it here.</div>
-            </div>
+              <div class="field">
+                <label>Expense Account</label>
+                <select id="exp_account_id" required>
+                  <option value="">Loading…</option>
+                </select>
+                <div class="hint" id="exp_account_hint"></div>
+              </div>
 
-            <div class="field">
-              <label>Reference</label>
-              <input id="expense_reference" placeholder="Optional" />
-            </div>
+              <div class="field">
+                <label>Paid Through</label>
+                <select id="exp_paid_through_account_id" required>
+                  <option value="">Loading…</option>
+                </select>
+                <div class="hint" id="paid_through_hint"></div>
+              </div>
 
-            <div class="field">
-              <label>Description / Notes</label>
-              <textarea id="expense_description" rows="3" placeholder="Optional"></textarea>
-            </div>
+              <div class="field full">
+                <label>Notes</label>
+                <input id="exp_notes" placeholder="Optional">
+              </div>
 
-            <div class="field">
-              <label>Expense Account</label>
-              <select id="expense_account_id"></select>
-              <div class="hint">Loaded from Chart_of_Accounts.csv</div>
-            </div>
+              <div class="field full">
+                <label>Reference</label>
+                <input id="exp_reference" placeholder="Optional">
+              </div>
 
-            <div class="field">
-              <label>Paid Through (Cash/Bank)</label>
-              <select id="paid_through_account_id"></select>
-              <div class="hint">Loaded from Chart_of_Accounts.csv</div>
-            </div>
+              <div class="field full">
+                <label>Vendor (optional)</label>
+                <select id="exp_vendor_id">
+                  <option value="">No vendor</option>
+                </select>
+              </div>
 
-            <div class="field">
-              <label>Receipt (optional)</label>
-              <input id="expense_receipt" type="file" />
+              <div class="field full">
+                <label>Attachment (optional)</label>
+                <input type="file" id="exp_receipt" accept="image/*,application/pdf">
+              </div>
+
             </div>
 
             <div class="actions">
-              <button id="expenseSubmitBtn" type="submit" class="primary">Save as Pending</button>
+              <button id="expenseSubmitBtn" class="primary" type="submit">Save as Pending</button>
             </div>
           </form>
 
           <div id="expenseResult" class="result hidden"></div>
         </div>
 
-        <!-- RETRIEVE PANEL -->
+        <!-- Retrieve Zoho Expenses -->
         <div id="panelRetrieve" class="panel hidden">
+          <div class="panelTitle">Retrieve Expenses (Zoho)</div>
+
           <div class="row">
-            <div class="field">
-              <label>From</label>
-              <input id="zoho_from" type="date" />
-            </div>
-            <div class="field">
-              <label>To</label>
-              <input id="zoho_to" type="date" />
-            </div>
-            <div class="field grow">
-              <label>Search</label>
-              <input id="zoho_search" placeholder="Vendor / Reference / Notes (optional)" />
-            </div>
-            <div class="field">
-              <label>&nbsp;</label>
-              <button id="expenseListBtn" class="secondary" type="button">Retrieve</button>
-            </div>
+            <input type="date" id="zoho_from" class="inlineInput" placeholder="From (optional)">
+            <input type="date" id="zoho_to" class="inlineInput" placeholder="To (optional)">
+            <input id="zoho_search" class="inlineInput" placeholder="Search text (optional)">
+            <button id="expenseListBtn" type="button" class="secondary">Retrieve</button>
           </div>
 
           <div id="zohoResult" class="result hidden"></div>
-          <div id="zohoList" class="list"></div>
+
+          <div id="expenseTableWrap" class="tableWrap hidden">
+            <table class="table" id="expenseTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Vendor</th>
+                  <th>Reference</th>
+                  <th>Receipt</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="expenseTableBody"></tbody>
+            </table>
+          </div>
+
+          <pre id="expenseDetails" class="details hidden"></pre>
+          <input type="file" id="zohoAttachFile" class="hidden" accept="image/*,application/pdf">
         </div>
 
-        <!-- PENDING PANEL -->
+        <!-- Pending Expenses -->
         <div id="panelPending" class="panel hidden">
+          <div class="panelTitle">Pending Expenses</div>
+
           <div class="row">
-            <div class="field">
-              <label>From</label>
-              <input id="pending_from" type="date" />
-            </div>
-            <div class="field">
-              <label>To</label>
-              <input id="pending_to" type="date" />
-            </div>
-            <div class="field">
-              <label>&nbsp;</label>
-              <button id="pendingListBtn" class="secondary" type="button">Retrieve</button>
-            </div>
+            <input type="date" id="pending_from" class="inlineInput" placeholder="From (optional)">
+            <input type="date" id="pending_to" class="inlineInput" placeholder="To (optional)">
+            <button id="pendingListBtn" type="button" class="secondary">Load Pending</button>
           </div>
 
           <div id="pendingResult" class="result hidden"></div>
-          <div id="pendingList" class="list"></div>
+
+          <div id="pendingTableWrap" class="tableWrap hidden">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Vendor</th>
+                  <th>Reference</th>
+                  <th>Receipt</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pendingTableBody"></tbody>
+            </table>
+          </div>
+
+          <pre id="pendingDetails" class="details hidden"></pre>
+          <input type="file" id="pendingAttachFile" class="hidden" accept="image/*,application/pdf">
         </div>
 
       </div>
     </section>
 
-  </main>
-</div>
-
-<!-- EXPENSE EDIT MODAL -->
-<div id="expenseEditModal" class="modal hidden">
-  <div id="expenseEditBackdrop" class="backdrop"></div>
-  <div class="modalCard">
-    <div class="modalHeader">
-      <div>
-        <div class="modalTitle">Edit Zoho Expense</div>
-        <div class="modalSubtitle">Update fields and save back to Zoho Books</div>
-      </div>
-      <button id="expenseEditClose" class="iconBtn" type="button">×</button>
-    </div>
-
-    <div class="hr"></div>
-
-    <div class="modalBody">
-      <div class="formGrid">
-        <div class="field">
-          <label>Date</label>
-          <input id="edit_expense_date" type="date" />
-        </div>
-
-        <div class="field">
-          <label>Amount</label>
-          <input id="edit_expense_amount" type="number" step="0.01" />
-        </div>
-
-        <div class="field">
-          <label>Vendor</label>
-          <select id="edit_vendor_id"></select>
-        </div>
-
-        <div class="field">
-          <label>Reference</label>
-          <input id="edit_reference_number" />
-        </div>
-
-        <div class="field">
-          <label>Description / Notes</label>
-          <textarea id="edit_description" rows="3"></textarea>
-        </div>
-
-        <div class="field">
-          <label>Expense Account</label>
-          <select id="edit_expense_account_id"></select>
-        </div>
-
-        <div class="field">
-          <label>Paid Through</label>
-          <select id="edit_expense_paid_through_account_id"></select>
-        </div>
-
-        <div class="field">
-          <label>Receipt (upload to Zoho)</label>
-          <input id="zohoAttachFile" type="file" />
-          <div class="hint">This adds a new attachment (does not overwrite)</div>
-        </div>
-
-      </div>
-
-      <div id="expenseEditMsg" class="result hidden"></div>
-
-      <div class="actions spread">
-        <div>
-          <button id="expenseDeleteBtn" class="danger" type="button">Delete</button>
-        </div>
-        <div class="rightActions">
-          <button id="expenseSaveBtn" class="primary" type="button">Save</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-
-<!-- PENDING EDIT MODAL -->
-<div id="pendingEditModal" class="modal hidden">
-  <div id="pendingEditBackdrop" class="backdrop"></div>
-  <div class="modalCard">
-    <div class="modalHeader">
-      <div>
-        <div class="modalTitle">Edit Pending Expense</div>
-        <div class="modalSubtitle">Update the pending expense, approve (post to Zoho), or delete it.</div>
-      </div>
-      <button id="pendingEditClose" class="mini" type="button">Close</button>
-    </div>
-
-    <div id="pendingEditMsg" class="result hidden"></div>
-
-    <div class="formGrid">
-      <div class="field">
-        <label>Date</label>
-        <input id="pedit_date" type="date" />
-      </div>
-
-      <div class="field">
-        <label>Amount</label>
-        <input id="pedit_amount" type="number" step="0.01" />
-      </div>
-
-      <div class="field">
-        <label>Vendor</label>
-        <select id="pedit_vendor_id">
-          <option value="">-- Select vendor --</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Vendor Name (manual)</label>
-        <input id="pedit_vendor_name" placeholder="Optional" />
-      </div>
-
-      <div class="field">
-        <label>Reference</label>
-        <input id="pedit_reference" placeholder="Optional" />
-      </div>
-
-      <div class="field">
-        <label>Notes</label>
-        <textarea id="pedit_notes" rows="3" placeholder="Optional"></textarea>
-      </div>
-
-      <div class="field">
-        <label>Expense Account</label>
-        <select id="pedit_account_id"></select>
-      </div>
-
-      <div class="field">
-        <label>Paid Through</label>
-        <select id="pedit_paid_through_account_id"></select>
-      </div>
-    </div>
-
-    <div class="modalFooter">
-      <button id="pendingSaveBtn" class="primary" type="button">Save</button>
-      <button id="pendingApproveBtn" class="primary" type="button">Approve / Post to Zoho</button>
-      <button id="pendingDeleteBtn" class="danger" type="button">Delete</button>
-      <button id="pendingCloseBtn" class="mini" type="button">Close</button>
-    </div>
   </div>
 </div>
 
@@ -386,18 +263,53 @@
       .replaceAll("'", "&#039;");
   }
 
-  function showResult(el, kind, msg) {
+  function setTodayIfEmpty(inputEl) {
+    if (!inputEl.value) {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      inputEl.value = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  function showResult(el, type, text) {
     el.classList.remove("hidden");
-    el.classList.remove("success", "error", "info");
-    el.classList.add(kind);
-    el.textContent = msg;
+    el.classList.remove("success", "error");
+    if (type) el.classList.add(type);
+    el.textContent = text;
   }
 
-  function hideResult(el) {
-    el.classList.add("hidden");
-    el.textContent = "";
+  function fillSelect(selectEl, accounts, placeholder) {
+    selectEl.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = placeholder || "Select…";
+    selectEl.appendChild(opt0);
+
+    accounts.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.account_id;
+      const code = a.account_code ? `${a.account_code} — ` : "";
+      const cur = a.currency ? ` (${a.currency})` : "";
+      opt.textContent = `${code}${a.account_name}${cur}`;
+      opt.dataset.code = a.account_code || "";
+      opt.dataset.currency = a.currency || "";
+      opt.dataset.type = a.account_type || "";
+      selectEl.appendChild(opt);
+    });
   }
 
+  function updateHint(selectEl, hintEl) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    if (!opt || !opt.value) { hintEl.textContent = ""; return; }
+    const code = opt.dataset.code ? `Code: ${opt.dataset.code}` : "";
+    const type = opt.dataset.type ? `Type: ${opt.dataset.type}` : "";
+    const cur = opt.dataset.currency ? `Currency: ${opt.dataset.currency}` : "";
+    hintEl.textContent = [code, type, cur].filter(Boolean).join(" • ");
+  }
+
+  // Navigation (blank by default)
   const blankSection = document.getElementById("blankSection");
   const assetsSection = document.getElementById("assetsSection");
   const expensesSection = document.getElementById("expensesSection");
@@ -419,16 +331,14 @@
     showOnly(assetsSection);
   });
 
-  navExpenses.addEventListener("click", () => {
+  navExpenses.addEventListener("click", async () => {
     setActive(navExpenses);
     showOnly(expensesSection);
-    showPanel(panelCreate);
+    setTodayIfEmpty(document.getElementById("exp_date"));
+    await Promise.all([loadCOADropdowns(), loadVendors()]);
   });
 
-  // Expense tabs
-  const tabCreate = document.getElementById("tabCreate");
-  const tabRetrieve = document.getElementById("tabRetrieve");
-  const tabPending = document.getElementById("tabPending");
+  // Panels
   const panelCreate = document.getElementById("panelCreate");
   const panelRetrieve = document.getElementById("panelRetrieve");
   const panelPending = document.getElementById("panelPending");
@@ -436,662 +346,383 @@
   function showPanel(panel) {
     [panelCreate, panelRetrieve, panelPending].forEach(p => p.classList.add("hidden"));
     panel.classList.remove("hidden");
-    [tabCreate, tabRetrieve, tabPending].forEach(t => t.classList.remove("active"));
-    if (panel === panelCreate) tabCreate.classList.add("active");
-    if (panel === panelRetrieve) tabRetrieve.classList.add("active");
-    if (panel === panelPending) tabPending.classList.add("active");
   }
 
-  tabCreate.addEventListener("click", () => showPanel(panelCreate));
-  tabRetrieve.addEventListener("click", () => showPanel(panelRetrieve));
-  tabPending.addEventListener("click", () => showPanel(panelPending));
+  document.getElementById("btnCreateExpense").addEventListener("click", () => showPanel(panelCreate));
+  document.getElementById("btnRetrieveExpenses").addEventListener("click", () => showPanel(panelRetrieve));
+  document.getElementById("btnPendingExpenses").addEventListener("click", () => showPanel(panelPending));
 
-  document.getElementById("btnCreateExpense").addEventListener("click", async () => {
-    showPanel(panelCreate);
-    try { await populateVendorsSelect(""); } catch (e) { /* ignore */ }
-  });
-
-  // IMPORTANT: Always reset to current month when opening Retrieve Expenses (as requested)
-  document.getElementById("btnRetrieveExpenses").addEventListener("click", async () => {
-    showPanel(panelRetrieve);
-    const dfEl = document.getElementById("zoho_from");
-    const dtEl = document.getElementById("zoho_to");
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    const dd = String(today.getDate()).padStart(2, "0");
-    dfEl.value = `${yyyy}-${mm}-01`;
-    dtEl.value = `${yyyy}-${mm}-${dd}`;
-    await loadZohoExpenses();
-  });
-
-  // IMPORTANT: Show ALL pendings when clicking Pending Expenses (date filters optional)
-  document.getElementById("btnPendingExpenses").addEventListener("click", async () => {
-    showPanel(panelPending);
-    const pf = document.getElementById("pending_from");
-    const pt = document.getElementById("pending_to");
-    pf.value = "";
-    pt.value = "";
-    await loadPending();
-  });
-
-  // Default panel
+  // Default: show nothing until module chosen, then default expense panel is Create
   showPanel(panelCreate);
 
-  // Assets (safe to ignore)
+  // Assets
   const assetForm = document.getElementById("assetForm");
   const assetResult = document.getElementById("assetResult");
+  const assetBtn = document.getElementById("assetSubmitBtn");
+
   assetForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    hideResult(assetResult);
+    assetBtn.disabled = true;
+    assetBtn.textContent = "Creating…";
+    assetResult.classList.add("hidden");
+
+    const payload = {
+      asset_name: asset_name.value,
+      asset_category: asset_category.value,
+      asset_cost: Number(asset_cost.value),
+      purchase_date: purchase_date.value,
+      depreciation_start_date: depreciation_start_date.value,
+      useful_life_months: Number(useful_life_months.value),
+      salvage_value: Number(salvage_value.value)
+    };
+
     try {
-      const payload = {
-        asset_name: document.getElementById("asset_name").value,
-        purchase_date: document.getElementById("purchase_date").value,
-        cost: document.getElementById("cost").value,
-        vendor_name: document.getElementById("asset_vendor_name").value,
-        description: document.getElementById("asset_description").value,
-      };
       const res = await fetch("/assets/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      showResult(assetResult, "success", "Asset created: " + (out.fixed_asset?.asset_number || "OK"));
-    } catch (err) {
-      showResult(assetResult, "error", String(err));
+      const data = await res.json();
+      if (data.ok) {
+        showResult(assetResult, "success", `Asset created successfully (Asset No: ${data.asset_number})`);
+        assetForm.reset();
+      } else {
+        throw new Error(JSON.stringify(data, null, 2));
+      }
+    } catch {
+      showResult(assetResult, "error", "Failed to create asset. Please check inputs.");
     }
+
+    assetBtn.disabled = false;
+    assetBtn.textContent = "Create Asset";
   });
 
   // COA dropdowns
-  async function loadCOA() {
-    const res = await fetch("/coa/accounts");
-    const out = await res.json();
-    if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-    return out.accounts;
+  const expAccountSelect = document.getElementById("exp_account_id");
+  const paidThroughSelect = document.getElementById("exp_paid_through_account_id");
+  const expAccountHint = document.getElementById("exp_account_hint");
+  const paidThroughHint = document.getElementById("paid_through_hint");
+
+  expAccountSelect.addEventListener("change", () => updateHint(expAccountSelect, expAccountHint));
+  paidThroughSelect.addEventListener("change", () => updateHint(paidThroughSelect, paidThroughHint));
+
+  async function loadCOADropdowns() {
+    const r1 = await fetch("/coa/expense-accounts");
+    const d1 = await r1.json();
+    if (d1.ok) fillSelect(expAccountSelect, d1.accounts, "Select expense account…");
+    else expAccountSelect.innerHTML = `<option value="">COA not loaded</option>`;
+
+    const r2 = await fetch("/coa/paid-through-accounts");
+    const d2 = await r2.json();
+    if (d2.ok) fillSelect(paidThroughSelect, d2.accounts, "Select paid through…");
+    else paidThroughSelect.innerHTML = `<option value="">COA not loaded</option>`;
+
+    updateHint(expAccountSelect, expAccountHint);
+    updateHint(paidThroughSelect, paidThroughHint);
   }
 
-  function fillSelect(selectEl, items, opts = {}) {
-    const placeholder = opts.placeholder || "-- Select --";
-    selectEl.innerHTML = "";
-    const opt0 = document.createElement("option");
-    opt0.value = "";
-    opt0.textContent = placeholder;
-    selectEl.appendChild(opt0);
-
-    for (const it of items) {
-      const opt = document.createElement("option");
-      opt.value = it.account_id;
-      opt.textContent = `${it.account_name} (${it.account_code || ""})`.trim();
-      selectEl.appendChild(opt);
+  // Vendors
+  async function loadVendors() {
+    const sel = document.getElementById("exp_vendor_id");
+    sel.innerHTML = `<option value="">Loading…</option>`;
+    try {
+      const res = await fetch("/vendors/list?page=1&per_page=200");
+      const out = await res.json();
+      if (!out.ok) throw new Error("failed");
+      sel.innerHTML = `<option value="">No vendor</option>`;
+      (out.vendors || []).forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.contact_id || "";
+        opt.textContent = v.contact_name || v.vendor_name || v.contact_id || "";
+        opt.dataset.name = opt.textContent;
+        sel.appendChild(opt);
+      });
+    } catch {
+      sel.innerHTML = `<option value="">No vendor (failed to load)</option>`;
     }
   }
 
-  let cachedCOA = null;
-  async function ensureCOALoaded() {
-    if (cachedCOA) return cachedCOA;
-    const accounts = await loadCOA();
-    cachedCOA = accounts;
-    return cachedCOA;
-  }
-
-  async function initExpenseDropdowns() {
-    const accounts = await ensureCOALoaded();
-    const expenseAccounts = accounts.filter(a => a.type === "Expense");
-    const cashBank = accounts.filter(a => a.type === "Cash" || a.type === "Bank");
-
-    fillSelect(document.getElementById("expense_account_id"), expenseAccounts, { placeholder: "Select expense account" });
-    fillSelect(document.getElementById("paid_through_account_id"), cashBank, { placeholder: "Select cash/bank account" });
-
-    fillSelect(document.getElementById("edit_expense_account_id"), expenseAccounts, { placeholder: "Select expense account" });
-    fillSelect(document.getElementById("edit_expense_paid_through_account_id"), cashBank, { placeholder: "Select cash/bank account" });
-  }
-
-  initExpenseDropdowns().catch(console.error);
-
-  // Create expense (Pending save)
-  const expenseForm = document.getElementById("expenseForm");
+  // Create Pending Expense
+  const pendingExpenseForm = document.getElementById("pendingExpenseForm");
   const expenseResult = document.getElementById("expenseResult");
+  const expenseBtn = document.getElementById("expenseSubmitBtn");
 
-  if (createVendorId && createVendorName) {
-    createVendorId.addEventListener("change", () => {
-      const sel = createVendorId.options[createVendorId.selectedIndex];
-      if (createVendorId.value && sel && sel.textContent) {
-        // Only auto-fill if empty or previously auto-filled
-        if (!createVendorName.value) createVendorName.value = sel.textContent;
-      }
-    });
-  }
-
-  expenseForm.addEventListener("submit", async (e) => {
+  pendingExpenseForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    hideResult(expenseResult);
+    expenseBtn.disabled = true;
+    expenseBtn.textContent = "Saving…";
+    expenseResult.classList.add("hidden");
+
+    const vendorSel = document.getElementById("exp_vendor_id");
+    const vendorOpt = vendorSel.options[vendorSel.selectedIndex];
+
+    const payload = {
+      date: exp_date.value,
+      account_id: expAccountSelect.value,
+      paid_through_account_id: paidThroughSelect.value,
+      amount: Number(exp_amount.value),
+      notes: document.getElementById("exp_notes").value.trim() || null,
+      reference: document.getElementById("exp_reference").value.trim() || null,
+      vendor_id: vendorSel.value || null,
+      vendor_name: vendorSel.value ? (vendorOpt?.textContent || "") : null,
+    };
 
     try {
-      const fd = new FormData();
-      const payload = {
-        date: document.getElementById("expense_date").value,
-        amount: Number(document.getElementById("expense_amount").value || 0),
-        currency: document.getElementById("expense_currency").value,
-        vendor_id: (document.getElementById("vendor_id")?.value || ""),
-        vendor_name: document.getElementById("vendor_name").value || "",
-        reference: document.getElementById("expense_reference").value || "",
-        notes: document.getElementById("expense_description").value || "",
-        account_id: document.getElementById("expense_account_id").value || "",
-        paid_through_account_id: document.getElementById("paid_through_account_id").value || "",
-      };
-
       const res = await fetch("/pending-expenses/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
-
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
 
-      // Upload receipt to pending (optional)
-      const fileEl = document.getElementById("expense_receipt");
-      const file = fileEl.files?.[0];
+      const pendingId = out.pending.id;
+
+      // optional attachment
+      const file = document.getElementById("exp_receipt").files?.[0];
       if (file) {
-        const fd2 = new FormData();
-        fd2.append("file", file);
-        await fetch(`/pending-expenses/${encodeURIComponent(out.pending.id)}/attachments`, {
-          method: "POST",
-          body: fd2
-        });
+        expenseBtn.textContent = "Uploading…";
+        const fd = new FormData();
+        fd.append("file", file);
+        const r2 = await fetch(`/pending-expenses/${pendingId}/attachments`, { method: "POST", body: fd });
+        const o2 = await r2.json();
+        if (!r2.ok || !o2.ok) throw new Error(JSON.stringify(o2, null, 2));
       }
 
-      showResult(expenseResult, "success", "Saved as pending expense.");
-      fileEl.value = "";
-      await loadPending(); // refresh list if user is on pending tab later
+      showResult(expenseResult, "success", `Saved to Pending (ID: ${pendingId}).`);
+      pendingExpenseForm.reset();
+      setTodayIfEmpty(document.getElementById("exp_date"));
+      await Promise.all([loadCOADropdowns(), loadVendors()]);
     } catch (err) {
-      showResult(expenseResult, "error", String(err));
+      showResult(expenseResult, "error", "Failed:\n" + (err?.message || String(err)));
     }
+
+    expenseBtn.disabled = false;
+    expenseBtn.textContent = "Save as Pending";
   });
 
   // Retrieve Zoho Expenses
-  const zohoList = document.getElementById("zohoList");
-  const zohoResult = document.getElementById("zohoResult");
   const expenseListBtn = document.getElementById("expenseListBtn");
+  const expenseTableWrap = document.getElementById("expenseTableWrap");
+  const expenseTableBody = document.getElementById("expenseTableBody");
+  const expenseDetails = document.getElementById("expenseDetails");
+  const zohoAttachFile = document.getElementById("zohoAttachFile");
+  const zohoResult = document.getElementById("zohoResult");
+
+  async function openLatestZohoAttachment(expenseId) {
+    window.open(`/expenses/${encodeURIComponent(expenseId)}/attachments/open-latest`, "_blank");
+  }
+
+  async function attachToZohoExpense(expenseId) {
+    zohoAttachFile.value = "";
+    zohoAttachFile.onchange = async () => {
+      const file = zohoAttachFile.files?.[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/expenses/${encodeURIComponent(expenseId)}/attachments`, { method: "POST", body: fd });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
+      showResult(zohoResult, "success", "Attachment added (non-overwriting).");
+    };
+    zohoAttachFile.click();
+  }
+
+  async function loadZohoExpenses() {
+    zohoResult.classList.add("hidden");
+    expenseDetails.classList.add("hidden");
+    expenseTableWrap.classList.add("hidden");
+    expenseTableBody.innerHTML = "";
+
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    params.set("per_page", "200");
+    params.set("filter_by", "Status.All");
+
+    const df = document.getElementById("zoho_from").value;
+    const dt = document.getElementById("zoho_to").value;
+    const st = document.getElementById("zoho_search").value.trim();
+
+    if (df) params.set("date_from", df);
+    if (dt) params.set("date_to", dt);
+    if (st) params.set("search_text", st);
+
+    try {
+      const res = await fetch("/expenses/list?" + params.toString());
+      const out = await res.json();
+      if (!out.ok) throw new Error("Zoho error");
+
+      const list = out.expenses || [];
+      if (!list.length) {
+        showResult(zohoResult, "", "No expenses found.");
+        return;
+      }
+
+      list.forEach((x) => {
+        const tr = document.createElement("tr");
+        const id = x.expense_id || "";
+
+        tr.innerHTML = `
+          <td>${escapeHtml(x.date || "")}</td>
+          <td>${escapeHtml(String((x.total || x.amount || "") + (x.currency_code ? (" " + x.currency_code) : "")))}</td>
+          <td>${escapeHtml(x.vendor_name || "")}</td>
+          <td>${escapeHtml(x.reference || "")}</td>
+          <td class="btnCell">
+            <button class="btnSmall secondary" data-action="attach" data-id="${escapeHtml(id)}">Attach</button>
+            <button class="btnSmall" data-action="open" data-id="${escapeHtml(id)}">Open</button>
+          </td>
+          <td class="btnCell">
+            <button class="btnSmall" data-action="view" data-id="${escapeHtml(id)}">View/Edit</button>
+          </td>
+        `;
+
+        tr.querySelectorAll("button").forEach(btn => {
+          const action = btn.getAttribute("data-action");
+          const eid = btn.getAttribute("data-id");
+          btn.addEventListener("click", async () => {
+            try {
+              if (action === "open") return openLatestZohoAttachment(eid);
+              if (action === "attach") return attachToZohoExpense(eid);
+              if (action === "view") return viewZohoExpense(eid);
+            } catch (err) {
+              showResult(zohoResult, "error", "Failed:\n" + (err?.message || String(err)));
+            }
+          });
+        });
+
+        expenseTableBody.appendChild(tr);
+      });
+
+      expenseTableWrap.classList.remove("hidden");
+    } catch {
+      showResult(zohoResult, "error", "Failed to load expenses.");
+    }
+  }
 
   expenseListBtn.addEventListener("click", loadZohoExpenses);
 
-  async function loadZohoExpenses() {
-    hideResult(zohoResult);
-    zohoList.innerHTML = "";
-
-    const df = document.getElementById("zoho_from").value || "";
-    const dt = document.getElementById("zoho_to").value || "";
-    const search = document.getElementById("zoho_search").value || "";
-
-    const qs = new URLSearchParams();
-    qs.set("page", "1");
-    qs.set("per_page", "200");
-    qs.set("filter_by", "Status.All");
-    if (search) qs.set("search_text", search);
-    if (df) qs.set("date_from", df);
-    if (dt) qs.set("date_to", dt);
-
-    try {
-      const res = await fetch("/expenses/list?" + qs.toString());
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      renderZohoExpenses(out.expenses || []);
-      showResult(zohoResult, "info", `Loaded ${out.count || (out.expenses || []).length} expenses.`);
-    } catch (err) {
-      showResult(zohoResult, "error", String(err));
-    }
-  }
-
-  function renderZohoExpenses(rows) {
-    zohoList.innerHTML = "";
-    if (!rows.length) {
-      zohoList.innerHTML = `<div class="empty">No expenses found.</div>`;
-      return;
-    }
-
-    for (const r of rows) {
-      const div = document.createElement("div");
-      div.className = "listRow";
-
-      const left = document.createElement("div");
-      left.className = "rowMain";
-      left.innerHTML = `
-        <div class="rowTitle">${escapeHtml(r.vendor_name || "Expense")}</div>
-        <div class="rowMeta">
-          <span>${escapeHtml(r.date || "")}</span>
-          <span class="dot">•</span>
-          <span>${escapeHtml(String(r.total || r.amount || ""))} ${escapeHtml(r.currency_code || "")}</span>
-          <span class="dot">•</span>
-          <span>${escapeHtml(r.reference_number || "")}</span>
-        </div>
-      `;
-
-      const actions = document.createElement("div");
-      actions.className = "rowActions";
-      actions.innerHTML = `
-        <button class="mini" type="button" data-id="${escapeHtml(r.expense_id)}">View/Edit</button>
-      `;
-
-      actions.querySelector("button").addEventListener("click", () => openExpenseEditor(r.expense_id));
-
-      div.appendChild(left);
-      div.appendChild(actions);
-      zohoList.appendChild(div);
-    }
+  async function viewZohoExpense(expenseId) {
+    expenseDetails.classList.add("hidden");
+    const res = await fetch("/expenses/by-id/" + encodeURIComponent(expenseId));
+    const data = await res.json();
+    expenseDetails.textContent = JSON.stringify(data, null, 2);
+    expenseDetails.classList.remove("hidden");
   }
 
   // Pending list
-  const pendingList = document.getElementById("pendingList");
+  const pendingListBtn = document.getElementById("pendingListBtn");
+  const pendingTableWrap = document.getElementById("pendingTableWrap");
+  const pendingTableBody = document.getElementById("pendingTableBody");
+  const pendingDetails = document.getElementById("pendingDetails");
   const pendingResult = document.getElementById("pendingResult");
-  document.getElementById("pendingListBtn").addEventListener("click", loadPending);
+  const pendingAttachFile = document.getElementById("pendingAttachFile");
 
-  async function loadPending() {
-    hideResult(pendingResult);
-    pendingList.innerHTML = "";
+  async function openPendingAttachment(attId) {
+    window.open(`/pending-expenses/attachments/open/${encodeURIComponent(attId)}`, "_blank");
+  }
 
-    const df = document.getElementById("pending_from").value || "";
-    const dt = document.getElementById("pending_to").value || "";
-
-    const qs = new URLSearchParams();
-    if (df) qs.set("date_from", df);
-    if (dt) qs.set("date_to", dt);
-
-    try {
-      const res = await fetch("/pending-expenses/list?" + qs.toString());
+  async function attachToPending(pendingId) {
+    pendingAttachFile.value = "";
+    pendingAttachFile.onchange = async () => {
+      const file = pendingAttachFile.files?.[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/pending-expenses/${encodeURIComponent(pendingId)}/attachments`, { method: "POST", body: fd });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      renderPending(out.pending || []);
-      showResult(pendingResult, "info", `Loaded ${out.count || (out.pending || []).length} pending expenses.`);
-    } catch (err) {
-      showResult(pendingResult, "error", String(err));
-    }
-  }
-
-  function renderPending(rows) {
-    pendingList.innerHTML = "";
-    if (!rows.length) {
-      pendingList.innerHTML = `<div class="empty">No pending expenses.</div>`;
-      return;
-    }
-
-    for (const r of rows) {
-      const div = document.createElement("div");
-      div.className = "listRow";
-      div.innerHTML = `
-        <div class="rowMain">
-          <div class="rowTitle">${escapeHtml(r.vendor_name || "Pending")}</div>
-          <div class="rowMeta">
-            <span>${escapeHtml(r.date || "")}</span>
-            <span class="dot">•</span>
-            <span>${escapeHtml(String(r.amount || ""))} ${escapeHtml(r.currency || "")}</span>
-            <span class="dot">•</span>
-            <span>${escapeHtml(r.reference_number || r.reference || "")}</span>
-            <span class="dot">•</span>
-            <span>${escapeHtml(r.status || "")}</span>
-          </div>
-        </div>
-
-        <div class="rowActions">
-          <button class="mini" type="button" data-action="pedit" data-id="${escapeHtml(String(r.id))}">View/Edit</button>
-          <button class="mini" type="button" data-action="papprove" data-id="${escapeHtml(String(r.id))}">Approve</button>
-          <button class="mini danger" type="button" data-action="pdelete" data-id="${escapeHtml(String(r.id))}">Delete</button>
-        </div>
-      `;
-      pendingList.appendChild(div);
-    }
-  }
-
-  
-  // Pending Edit Modal
-  const pendingEditModal = document.getElementById("pendingEditModal");
-  const pendingEditBackdrop = document.getElementById("pendingEditBackdrop");
-  const pendingEditClose = document.getElementById("pendingEditClose");
-  const pendingEditMsg = document.getElementById("pendingEditMsg");
-  const pendingSaveBtn = document.getElementById("pendingSaveBtn");
-  const pendingApproveBtn = document.getElementById("pendingApproveBtn");
-  const pendingDeleteBtn = document.getElementById("pendingDeleteBtn");
-  const pendingCloseBtn = document.getElementById("pendingCloseBtn");
-
-  const peditDate = document.getElementById("pedit_date");
-  const peditAmount = document.getElementById("pedit_amount");
-  const peditVendorId = document.getElementById("pedit_vendor_id");
-  const peditVendorName = document.getElementById("pedit_vendor_name");
-  const peditReference = document.getElementById("pedit_reference");
-  const peditNotes = document.getElementById("pedit_notes");
-  const peditAccountId = document.getElementById("pedit_account_id");
-  const peditPaidThroughId = document.getElementById("pedit_paid_through_account_id");
-
-  let currentPendingId = null;
-
-  function showPendingEditModal() {
-    pendingEditModal.classList.remove("hidden");
-    pendingEditBackdrop.classList.remove("hidden");
-  }
-  function hidePendingEditModal() {
-    pendingEditModal.classList.add("hidden");
-    pendingEditBackdrop.classList.add("hidden");
-    currentPendingId = null;
-    hideResult(pendingEditMsg);
-  }
-
-  async function openPendingEditor(pendingId) {
-    hideResult(pendingEditMsg);
-    currentPendingId = pendingId;
-
-    try {
-      await populateVendorsSelect("");
-      await loadCOA(); // ensure COA is ready
-
-      // populate COA in pending edit selects
-      peditAccountId.innerHTML = document.getElementById("expense_account_id").innerHTML;
-      peditPaidThroughId.innerHTML = document.getElementById("paid_through_account_id").innerHTML;
-
-      const res = await fetch("/pending-expenses/" + encodeURIComponent(pendingId));
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-
-      const p = out.pending || {};
-      peditDate.value = p.date || "";
-      peditAmount.value = p.amount || "";
-      peditVendorName.value = p.vendor_name || "";
-      peditReference.value = p.reference || p.reference_number || "";
-      peditNotes.value = p.notes || "";
-      if (peditVendorId) peditVendorId.value = p.vendor_id || "";
-      if (p.account_id) peditAccountId.value = p.account_id;
-      if (p.paid_through_account_id) peditPaidThroughId.value = p.paid_through_account_id;
-
-      showPendingEditModal();
-    } catch (err) {
-      showResult(pendingEditMsg, "error", String(err));
-      showPendingEditModal();
-    }
-  }
-
-  async function savePendingEdits() {
-    if (!currentPendingId) return;
-    hideResult(pendingEditMsg);
-
-    const payload = {
-      date: peditDate.value,
-      amount: Number(peditAmount.value || 0),
-      vendor_id: peditVendorId ? peditVendorId.value : "",
-      vendor_name: peditVendorName.value || "",
-      reference: peditReference.value || "",
-      notes: peditNotes.value || "",
-      account_id: peditAccountId.value || "",
-      paid_through_account_id: peditPaidThroughId.value || "",
-      currency: "IQD",
+      showResult(pendingResult, "success", "Attachment added to pending.");
+      await loadPending();
     };
-
-    try {
-      const res = await fetch("/pending-expenses/" + encodeURIComponent(currentPendingId), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      showResult(pendingEditMsg, "info", "Saved.");
-      await loadPending();
-    } catch (err) {
-      showResult(pendingEditMsg, "error", String(err));
-    }
+    pendingAttachFile.click();
   }
 
-  async function approvePending() {
-    if (!currentPendingId) return;
-    const ok = confirm("Approve this pending expense and post it to Zoho?");
-    if (!ok) return;
-
-    hideResult(pendingEditMsg);
-    try {
-      const res = await fetch("/pending-expenses/" + encodeURIComponent(currentPendingId) + "/approve", { method: "POST" });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      showResult(pendingEditMsg, "info", "Approved and posted to Zoho.");
-      await loadPending();
-    } catch (err) {
-      showResult(pendingEditMsg, "error", String(err));
-    }
-  }
-
-  async function deletePending() {
-    if (!currentPendingId) return;
-    const ok = confirm("Delete this pending expense? This cannot be undone.");
-    if (!ok) return;
-
-    hideResult(pendingEditMsg);
-    try {
-      const res = await fetch("/pending-expenses/" + encodeURIComponent(currentPendingId), { method: "DELETE" });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-      showResult(pendingEditMsg, "info", "Deleted.");
-      await loadPending();
-      setTimeout(hidePendingEditModal, 500);
-    } catch (err) {
-      showResult(pendingEditMsg, "error", String(err));
-    }
-  }
-
-  // Pending list actions (delegate)
-  pendingList.addEventListener("click", async (ev) => {
-    const btn = ev.target.closest("button[data-action]");
-    if (!btn) return;
-    const act = btn.getAttribute("data-action");
-    const id = btn.getAttribute("data-id");
-    if (!id) return;
-
-    if (act === "pedit") {
-      await openPendingEditor(id);
-    } else if (act === "papprove") {
-      const ok = confirm("Approve this pending expense and post it to Zoho?");
-      if (!ok) return;
-      try {
-        const res = await fetch("/pending-expenses/" + encodeURIComponent(id) + "/approve", { method: "POST" });
-        const out = await res.json();
-        if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-        await loadPending();
-        showResult(pendingResult, "info", "Approved and posted to Zoho.");
-      } catch (err) {
-        showResult(pendingResult, "error", String(err));
-      }
-    } else if (act === "pdelete") {
-      const ok = confirm("Delete this pending expense? This cannot be undone.");
-      if (!ok) return;
-      try {
-        const res = await fetch("/pending-expenses/" + encodeURIComponent(id), { method: "DELETE" });
-        const out = await res.json();
-        if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-        await loadPending();
-        showResult(pendingResult, "info", "Deleted.");
-      } catch (err) {
-        showResult(pendingResult, "error", String(err));
-      }
-    }
-  });
-
-  pendingEditBackdrop.addEventListener("click", hidePendingEditModal);
-  pendingEditClose.addEventListener("click", hidePendingEditModal);
-  pendingCloseBtn.addEventListener("click", hidePendingEditModal);
-  pendingSaveBtn.addEventListener("click", savePendingEdits);
-  pendingApproveBtn.addEventListener("click", approvePending);
-  pendingDeleteBtn.addEventListener("click", deletePending);
-
-
-// Expense Edit Modal
-  const expenseEditModal = document.getElementById("expenseEditModal");
-  const expenseEditBackdrop = document.getElementById("expenseEditBackdrop");
-  const expenseEditClose = document.getElementById("expenseEditClose");
-  const expenseEditMsg = document.getElementById("expenseEditMsg");
-
-  const editExpenseDate = document.getElementById("edit_expense_date");
-  const editExpenseAmount = document.getElementById("edit_expense_amount");
-  const editVendorId = document.getElementById("edit_vendor_id");
-  const editReferenceNumber = document.getElementById("edit_reference_number");
-  const editDescription = document.getElementById("edit_description");
-  const editExpenseAccount = document.getElementById("edit_expense_account_id");
-  const editExpensePaidThrough = document.getElementById("edit_expense_paid_through_account_id");
-
-  const expenseSaveBtn = document.getElementById("expenseSaveBtn");
-  const expenseDeleteBtn = document.getElementById("expenseDeleteBtn");
-
-  let currentEditExpenseId = null;
-  let cachedVendors = null;
-  const createVendorId = document.getElementById("vendor_id");
-  const createVendorName = document.getElementById("vendor_name");
-
-
-  function hideExpenseEditModal() {
-    expenseEditMsg.classList.add("hidden");
-    expenseEditModal.classList.add("hidden");
-    currentEditExpenseId = null;
-  }
-
-  function showExpenseEditModal() {
-    expenseEditModal.classList.remove("hidden");
-  }
-
-  expenseEditClose.addEventListener("click", hideExpenseEditModal);
-  expenseEditBackdrop.addEventListener("click", hideExpenseEditModal);
-
-  async function ensureVendorsLoaded() {
-    if (cachedVendors) return cachedVendors;
-    const res = await fetch("/vendors/list?page=1&per_page=200");
+  async function approvePending(pendingId) {
+    const res = await fetch(`/pending-expenses/${encodeURIComponent(pendingId)}/approve`, { method: "POST" });
     const out = await res.json();
     if (!res.ok || !out.ok) throw new Error(JSON.stringify(out, null, 2));
-    cachedVendors = out.vendors || [];
-    return cachedVendors;
+    showResult(pendingResult, "success", `Approved and posted to Zoho (Expense ID: ${out.zoho_expense_id}).`);
+    await loadPending();
   }
 
-  async function populateVendorsSelect(selectedId) {
-    const vendors = await ensureVendorsLoaded();
-
-    // Edit Zoho expense modal select
-    if (typeof editVendorId !== "undefined" && editVendorId) {
-      editVendorId.innerHTML = `<option value="">-- Select vendor --</option>`;
-      for (const v of vendors) {
-        const opt = document.createElement("option");
-        opt.value = v.vendor_id;
-        opt.textContent = v.vendor_name;
-        if (selectedId && String(selectedId) === String(v.vendor_id)) opt.selected = true;
-        editVendorId.appendChild(opt);
-      }
-    }
-
-    // Create pending expense select
-    if (createVendorId) {
-      createVendorId.innerHTML = `<option value="">-- Select vendor (optional) --</option>`;
-      for (const v of vendors) {
-        const opt = document.createElement("option");
-        opt.value = v.vendor_id;
-        opt.textContent = v.vendor_name;
-        createVendorId.appendChild(opt);
-      }
-    }
-
-    // Pending edit modal select
-    const peditVendorIdEl = document.getElementById("pedit_vendor_id");
-    if (peditVendorIdEl) {
-      peditVendorIdEl.innerHTML = `<option value="">-- Select vendor --</option>`;
-      for (const v of vendors) {
-        const opt = document.createElement("option");
-        opt.value = v.vendor_id;
-        opt.textContent = v.vendor_name;
-        peditVendorIdEl.appendChild(opt);
-      }
-    }
+  async function viewPending(pendingId) {
+    pendingDetails.classList.add("hidden");
+    const res = await fetch("/pending-expenses/" + encodeURIComponent(pendingId));
+    const data = await res.json();
+    pendingDetails.textContent = JSON.stringify(data, null, 2);
+    pendingDetails.classList.remove("hidden");
   }
 
-  async function openExpenseEditor(expenseId) {
-    hideResult(expenseEditMsg);
-    currentEditExpenseId = expenseId;
+  async function loadPending() {
+    pendingResult.classList.add("hidden");
+    pendingDetails.classList.add("hidden");
+    pendingTableWrap.classList.add("hidden");
+    pendingTableBody.innerHTML = "";
 
-    const res = await fetch("/expenses/by-id/" + encodeURIComponent(expenseId));
+    const df = document.getElementById("pending_from").value;
+    const dt = document.getElementById("pending_to").value;
+
+    const params = new URLSearchParams();
+    if (df) params.set("date_from", df);
+    if (dt) params.set("date_to", dt);
+
+    const res = await fetch("/pending-expenses/list?" + params.toString());
     const out = await res.json();
-    if (!res.ok || !out.ok) {
-      showResult(expenseEditMsg, "error", "Failed to load expense:\n" + JSON.stringify(out, null, 2));
-      showExpenseEditModal();
+    if (!out.ok) {
+      showResult(pendingResult, "error", "Failed to load pending.");
       return;
     }
 
-    const e = out.expense || {};
+    const list = out.pending || [];
+    if (!list.length) {
+      showResult(pendingResult, "", "No pending expenses.");
+      return;
+    }
 
-    editExpenseDate.value = e.date || "";
-    editExpenseAmount.value = e.total || e.amount || "";
-    editReferenceNumber.value = e.reference_number || "";
-    editDescription.value = e.description || "";
+    // For each pending, we also need its attachments list to open last one.
+    // Keep it simple: open goes to details page JSON for now; or you can expand later.
+    list.forEach((x) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(x.date || "")}</td>
+        <td>${escapeHtml(String(x.amount || ""))}</td>
+        <td>${escapeHtml(x.vendor_name || "")}</td>
+        <td>${escapeHtml(x.reference || "")}</td>
+        <td class="btnCell">
+          <button class="btnSmall secondary" data-action="attach" data-id="${escapeHtml(x.id)}">Attach</button>
+        </td>
+        <td class="btnCell">
+          <button class="btnSmall" data-action="view" data-id="${escapeHtml(x.id)}">View/Edit</button>
+          <button class="btnSmall secondary" data-action="approve" data-id="${escapeHtml(x.id)}">Approve</button>
+        </td>
+      `;
 
-    await populateVendorsSelect(e.vendor_id || "");
-
-    // COA selects already filled globally; set selected values
-    if (e.expense_account_id) editExpenseAccount.value = e.expense_account_id;
-    if (e.paid_through_account_id) editExpensePaidThrough.value = e.paid_through_account_id;
-
-    showExpenseEditModal();
-  }
-
-  async function saveEditedExpense() {
-    if (!currentEditExpenseId) return;
-    hideResult(expenseEditMsg);
-
-    const payload = {
-      date: editExpenseDate.value || undefined,
-      amount: editExpenseAmount.value ? Number(editExpenseAmount.value) : undefined,
-      vendor_id: editVendorId.value || undefined,
-      reference_number: editReferenceNumber.value || undefined,
-      description: editDescription.value || undefined,
-      expense_account_id: editExpenseAccount.value || undefined,
-      paid_through_account_id: editExpensePaidThrough.value || undefined,
-    };
-
-    try {
-      const res = await fetch("/expenses/update/" + encodeURIComponent(currentEditExpenseId), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      tr.querySelectorAll("button").forEach(btn => {
+        const action = btn.getAttribute("data-action");
+        const pid = btn.getAttribute("data-id");
+        btn.addEventListener("click", async () => {
+          try {
+            if (action === "attach") return attachToPending(pid);
+            if (action === "approve") return approvePending(pid);
+            if (action === "view") return viewPending(pid);
+          } catch (err) {
+            showResult(pendingResult, "error", "Failed:\n" + (err?.message || String(err)));
+          }
+        });
       });
-      const out = await res.json();
-      if (!res.ok || !out.ok) {
-        showResult(expenseEditMsg, "error", "Update failed:\n" + JSON.stringify(out, null, 2));
-        return;
-      }
-      showResult(expenseEditMsg, "success", "Updated successfully.");
-      await loadZohoExpenses();
-    } catch (err) {
-      showResult(expenseEditMsg, "error", String(err));
-    }
+
+      pendingTableBody.appendChild(tr);
+    });
+
+    pendingTableWrap.classList.remove("hidden");
   }
 
-  async function deleteEditedExpense() {
-    if (!currentEditExpenseId) return;
-    const ok = confirm("Delete this expense in Zoho? This cannot be undone.");
-    if (!ok) return;
+  pendingListBtn.addEventListener("click", loadPending);
 
-    expenseEditMsg.classList.add("hidden");
-
-    const res = await fetch("/expenses/delete/" + encodeURIComponent(currentEditExpenseId), { method: "DELETE" });
-    let out = null;
-    try { out = await res.json(); } catch { out = null; }
-
-    if (!res.ok) {
-      showResult(expenseEditMsg, "error", "Delete failed:\n" + (out ? JSON.stringify(out, null, 2) : res.statusText));
-      return;
-    }
-
-    showResult(expenseEditMsg, "success", "Deleted successfully.");
-    await loadZohoExpenses();
-    setTimeout(hideExpenseEditModal, 600);
-  }
-
-  expenseSaveBtn.addEventListener("click", saveEditedExpense);
-  expenseDeleteBtn.addEventListener("click", deleteEditedExpense);
-
+  // Defaults
+  setTodayIfEmpty(document.getElementById("purchase_date"));
+  setTodayIfEmpty(document.getElementById("depreciation_start_date"));
 </script>
 
 </body>
 </html>
-
