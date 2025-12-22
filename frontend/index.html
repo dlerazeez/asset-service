@@ -2,10 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <title>Assets & Expenses</title>
+  <title>Laveen Accounting - Asset Service</title>
   <link rel="stylesheet" href="/static/style.css?v=200">
 </head>
 <body>
@@ -47,139 +44,272 @@
       </div>
     </section>
 
-    <!-- ASSETS SECTION -->
+    <!-- Assets Section -->
     <section id="assetsSection" class="section hidden">
       <div class="card">
         <div class="cardHeader">
           <div>
             <h1>Assets</h1>
-            <div class="subtitle">Create, retrieve, and manage fixed assets</div>
+            <div class="subtitle">Create, retrieve, and manage fixed assets.</div>
           </div>
-          <div class="badge">Assets</div>
         </div>
 
-        <div class="hr"></div>
-
         <div id="assetPanelCreate" class="panel">
-          <div class="panelTitle">Create Fixed Asset</div>
+          <h2>Create Asset</h2>
 
-          <form id="assetForm">
-            <div class="formGrid">
-              <div class="field full">
-                <label>Asset Name</label>
-                <input id="asset_name" required>
-              </div>
-
-              <div class="field">
-                <label>Asset Category</label>
-                <select id="asset_category" required>
-                  <option value="COMPUTERS">Computers & Electronics</option>
-                  <option value="FURNITURE">Furniture & Equipment</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label>Purchase Cost</label>
-                <input type="number" id="asset_cost" required>
-              </div>
-
-              <div class="field">
-                <label>Purchase Date</label>
-                <input type="date" id="purchase_date" required>
-              </div>
-
-              <div class="field">
-                <label>Depreciation Start Date</label>
-                <input type="date" id="depreciation_start_date" required>
-              </div>
-
-              <div class="field">
-                <label>Useful Life (Months)</label>
-                <input type="number" id="useful_life_months" required>
-              </div>
-
-              <div class="field full">
-                <label>Salvage Value</label>
-                <input type="number" id="salvage_value" value="0">
-              </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Asset Name</label>
+              <input id="asset_name" type="text" placeholder="e.g. Laptop" />
+            </div>
+            <div class="field">
+              <label>Fixed Asset Type ID</label>
+              <input id="fixed_asset_type_id" type="text" placeholder="Zoho fixed_asset_type_id" />
             </div>
 
-            <div class="actions">
-              <button id="assetSubmitBtn" class="primary" type="submit">Create Asset</button>
+            <div class="field">
+              <label>Purchase Date</label>
+              <input id="purchase_date" type="date" />
             </div>
-          </form>
+            <div class="field">
+              <label>Purchase Value</label>
+              <input id="purchase_value" type="number" step="0.01" />
+            </div>
 
-          <div id="assetResult" class="result hidden"></div>
+            <div class="field">
+              <label>Total Life (months)</label>
+              <input id="total_life" type="number" />
+            </div>
+            <div class="field">
+              <label>Branch ID</label>
+              <input id="branch_id" type="text" placeholder="Zoho branch_id" />
+            </div>
+
+            <div class="field">
+              <label>Location ID</label>
+              <input id="location_id" type="text" placeholder="Zoho location_id" />
+            </div>
+            <div class="field">
+              <label>Description</label>
+              <input id="asset_description" type="text" placeholder="optional" />
+            </div>
+          </div>
+
+          <div class="actionsRow">
+            <button id="btnCreateAsset" class="primary">Create</button>
+            <div id="assetCreateMsg" class="msg"></div>
+          </div>
         </div>
 
         <div id="assetPanelRetrieve" class="panel hidden">
-          <div class="panelTitle">Retrieve Assets</div>
-          <button id="assetRefreshBtn" class="secondary">Refresh</button>
-          <div id="assetListResult" class="result hidden"></div>
-
-          <div id="assetTableWrap" class="tableWrap hidden">
-            <table class="table">
+          <h2>Retrieve Assets</h2>
+          <div class="actionsRow">
+            <button id="btnLoadAssets" class="primary">Load All</button>
+            <div id="assetsLoadMsg" class="msg"></div>
+          </div>
+          <div class="tableWrap">
+            <table id="assetsTable">
               <thead>
                 <tr>
-                  <th>Asset</th>
+                  <th>ID</th>
+                  <th>Name</th>
                   <th>Status</th>
                   <th>Asset Number</th>
-                  <th>Purchase Date</th>
-                  <th>Cost</th>
+                  <th>Type</th>
+                  <th>Branch</th>
+                  <th>Location</th>
                 </tr>
               </thead>
-              <tbody id="assetTableBody"></tbody>
+              <tbody></tbody>
             </table>
           </div>
         </div>
 
         <div id="assetPanelPending" class="panel hidden">
-          <div class="panelTitle">Pending Assets</div>
-          <button id="assetPendingRefreshBtn" class="secondary">Refresh</button>
-          <div id="assetPendingResult" class="result hidden"></div>
-
-          <div id="assetPendingTableWrap" class="tableWrap hidden">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Asset</th>
-                  <th>Status</th>
-                  <th>Asset Number</th>
-                  <th>Purchase Date</th>
-                  <th>Cost</th>
-                </tr>
-              </thead>
-              <tbody id="assetPendingTableBody"></tbody>
-            </table>
+          <h2>Pending Assets</h2>
+          <div class="muted">
+            This is a placeholder panel. If you want “Pending” to show Draft assets (or a specific status),
+            tell me which Zoho status value you use.
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- EXPENSES SECTION -->
+    <!-- Expenses Section -->
     <section id="expensesSection" class="section hidden">
       <div class="card">
         <div class="cardHeader">
           <div>
             <h1>Expenses</h1>
-            <div class="subtitle">Create pending expenses and manage posted expenses</div>
+            <div class="subtitle">Create expenses, retrieve Zoho expenses, and manage pending approvals.</div>
           </div>
-          <div class="badge">Expenses</div>
         </div>
 
-        <div class="hr"></div>
+        <!-- Panels -->
+        <div id="panelCreate" class="panel">
+          <h2>Create Pending Expense</h2>
 
-        <div id="panelCreate" class="panel hidden">
-          <div class="panelTitle">Create Pending Expense</div>
-          <!-- form unchanged -->
+          <div class="grid2">
+            <div class="field">
+              <label>Date</label>
+              <input id="pending_date" type="date" />
+            </div>
+
+            <div class="field">
+              <label>Amount</label>
+              <input id="pending_amount" type="number" step="0.01" />
+            </div>
+
+            <div class="field">
+              <label>Expense Account</label>
+              <select id="pending_expense_account"></select>
+            </div>
+
+            <div class="field">
+              <label>Paid Through</label>
+              <select id="pending_paid_through"></select>
+            </div>
+
+            <div class="field">
+              <label>Vendor</label>
+              <select id="pending_vendor"></select>
+            </div>
+
+            <div class="field">
+              <label>Description</label>
+              <input id="pending_description" type="text" placeholder="optional" />
+            </div>
+
+            <div class="field">
+              <label>Attachment (optional)</label>
+              <input id="pending_attachment" type="file" />
+            </div>
+          </div>
+
+          <div class="actionsRow">
+            <button id="btnCreatePending" class="primary">Create Pending</button>
+            <div id="pendingCreateMsg" class="msg"></div>
+          </div>
         </div>
 
         <div id="panelRetrieve" class="panel hidden">
-          <div class="panelTitle">Retrieve Expenses (Zoho)</div>
+          <h2>Retrieve Zoho Expenses</h2>
+
+          <div class="grid3">
+            <div class="field">
+              <label>From</label>
+              <input id="zoho_from" type="date" />
+            </div>
+            <div class="field">
+              <label>To</label>
+              <input id="zoho_to" type="date" />
+            </div>
+            <div class="field">
+              <label>Search</label>
+              <input id="zoho_search" type="text" placeholder="vendor, description, etc." />
+            </div>
+          </div>
+
+          <div class="actionsRow">
+            <button id="btnLoadZohoExpenses" class="primary">Load</button>
+            <div id="zohoLoadMsg" class="msg"></div>
+          </div>
+
+          <div class="tableWrap">
+            <table id="zohoExpensesTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date</th>
+                  <th>Vendor</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Description</th>
+                  <th>Attachments</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="cardDivider"></div>
+
+          <h3>Upload Attachment to Zoho Expense</h3>
+          <div class="grid2">
+            <div class="field">
+              <label>Expense ID</label>
+              <input id="zoho_expense_id" type="text" placeholder="Zoho expense_id" />
+            </div>
+            <div class="field">
+              <label>File</label>
+              <input id="zoho_expense_file" type="file" />
+            </div>
+          </div>
+          <div class="actionsRow">
+            <button id="btnUploadZohoAttachment" class="primary">Upload</button>
+            <div id="zohoUploadMsg" class="msg"></div>
+          </div>
+
         </div>
 
         <div id="panelPending" class="panel hidden">
-          <div class="panelTitle">Pending Expenses</div>
+          <h2>Pending Expenses</h2>
+
+          <div class="grid2">
+            <div class="field">
+              <label>From</label>
+              <input id="pending_from" type="date" />
+            </div>
+            <div class="field">
+              <label>To</label>
+              <input id="pending_to" type="date" />
+            </div>
+          </div>
+
+          <div class="actionsRow">
+            <button id="btnLoadPending" class="primary">Load</button>
+            <div id="pendingLoadMsg" class="msg"></div>
+          </div>
+
+          <div class="tableWrap">
+            <table id="pendingTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date</th>
+                  <th>Vendor</th>
+                  <th>Amount</th>
+                  <th>Expense Account</th>
+                  <th>Paid Through</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Approve</th>
+                  <th>Delete</th>
+                  <th>Attachments</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="cardDivider"></div>
+
+          <h3>Upload Attachment to Pending</h3>
+          <div class="grid2">
+            <div class="field">
+              <label>Pending ID</label>
+              <input id="pending_id_attach" type="text" placeholder="pending expense id" />
+            </div>
+            <div class="field">
+              <label>File</label>
+              <input id="pending_file_attach" type="file" />
+            </div>
+          </div>
+          <div class="actionsRow">
+            <button id="btnUploadPendingAttachment" class="primary">Upload</button>
+            <div id="pendingUploadMsg" class="msg"></div>
+          </div>
         </div>
 
       </div>
@@ -188,11 +318,592 @@
   </div>
 </div>
 
-<!-- JavaScript unchanged from your pasted version -->
 <script>
-/* JS CONTENT REMAINS EXACTLY AS YOU PASTED (no conflict markers) */
+  // Sections
+  const blankSection = document.getElementById("blankSection");
+  const assetsSection = document.getElementById("assetsSection");
+  const expensesSection = document.getElementById("expensesSection");
+
+  function showOnly(section) {
+    [blankSection, assetsSection, expensesSection].forEach(s => s.classList.add("hidden"));
+    section.classList.remove("hidden");
+  }
+
+  // Left nav buttons
+  const navAssets = document.getElementById("navAssets");
+  const navExpenses = document.getElementById("navExpenses");
+
+  const assetsSubnav = document.getElementById("assetsSubnav");
+  const expensesSubnav = document.getElementById("expensesSubnav");
+
+  const navAssetsCreate = document.getElementById("navAssetsCreate");
+  const navAssetsRetrieve = document.getElementById("navAssetsRetrieve");
+  const navAssetsPending = document.getElementById("navAssetsPending");
+
+  const navExpensesCreate = document.getElementById("navExpensesCreate");
+  const navExpensesRetrieve = document.getElementById("navExpensesRetrieve");
+  const navExpensesPending = document.getElementById("navExpensesPending");
+
+  function clearActive() {
+    document.querySelectorAll(".navBtn").forEach(b => b.classList.remove("active"));
+  }
+
+  function setSubActive(module, btn) {
+    clearActive();
+    if (module === "assets") {
+      navAssets.classList.add("active");
+      btn.classList.add("active");
+    } else if (module === "expenses") {
+      navExpenses.classList.add("active");
+      btn.classList.add("active");
+    }
+  }
+
+  function setModule(module) {
+    // Toggle subnav visibility
+    if (module === "assets") {
+      assetsSubnav.classList.remove("hidden");
+      expensesSubnav.classList.add("hidden");
+    } else if (module === "expenses") {
+      expensesSubnav.classList.remove("hidden");
+      assetsSubnav.classList.add("hidden");
+    }
+  }
+
+  // Asset panels
+  const assetPanelCreate = document.getElementById("assetPanelCreate");
+  const assetPanelRetrieve = document.getElementById("assetPanelRetrieve");
+  const assetPanelPending = document.getElementById("assetPanelPending");
+
+  function showAssetPanel(panel) {
+    [assetPanelCreate, assetPanelRetrieve, assetPanelPending].forEach(p => p.classList.add("hidden"));
+    panel.classList.remove("hidden");
+  }
+
+  // Expenses panels
+  const panelCreate = document.getElementById("panelCreate");
+  const panelRetrieve = document.getElementById("panelRetrieve");
+  const panelPending = document.getElementById("panelPending");
+
+  function showPanel(panel) {
+    [panelCreate, panelRetrieve, panelPending].forEach(p => p.classList.add("hidden"));
+    panel.classList.remove("hidden");
+  }
+
+  // Default landing
+  showOnly(blankSection);
+
+  // Nav actions
+  navAssets.addEventListener("click", () => {
+    setModule("assets");
+    showOnly(assetsSection);
+    setSubActive("assets", navAssetsCreate);
+    showAssetPanel(assetPanelCreate);
+  });
+
+  navExpenses.addEventListener("click", async () => {
+    setModule("expenses");
+    showOnly(expensesSection);
+    await initExpenses();
+    setSubActive("expenses", navExpensesCreate);
+    showPanel(panelCreate);
+  });
+
+  // Sub navigation (Assets)
+  navAssetsCreate.addEventListener("click", () => {
+    setModule("assets");
+    showOnly(assetsSection);
+    setSubActive("assets", navAssetsCreate);
+    showAssetPanel(assetPanelCreate);
+  });
+
+  navAssetsRetrieve.addEventListener("click", async () => {
+    setModule("assets");
+    showOnly(assetsSection);
+    setSubActive("assets", navAssetsRetrieve);
+    showAssetPanel(assetPanelRetrieve);
+    await loadAssets();
+  });
+
+  navAssetsPending.addEventListener("click", () => {
+    setModule("assets");
+    showOnly(assetsSection);
+    setSubActive("assets", navAssetsPending);
+    showAssetPanel(assetPanelPending);
+  });
+
+  // Sub navigation (Expenses)
+  navExpensesCreate.addEventListener("click", async () => {
+    setModule("expenses");
+    showOnly(expensesSection);
+    await initExpenses();
+    setSubActive("expenses", navExpensesCreate);
+    showPanel(panelCreate);
+  });
+
+  navExpensesRetrieve.addEventListener("click", async () => {
+    setModule("expenses");
+    showOnly(expensesSection);
+    setSubActive("expenses", navExpensesRetrieve);
+    showPanel(panelRetrieve);
+
+    // Requirement: default retrieve = current month
+    document.getElementById("zoho_from").value = "";
+    document.getElementById("zoho_to").value = "";
+    document.getElementById("zoho_search").value = "";
+
+    await loadZohoExpenses();
+  });
+
+  navExpensesPending.addEventListener("click", async () => {
+    setModule("expenses");
+    showOnly(expensesSection);
+    setSubActive("expenses", navExpensesPending);
+    showPanel(panelPending);
+
+    // Requirement: pending shows all pending by default
+    document.getElementById("pending_from").value = "";
+    document.getElementById("pending_to").value = "";
+
+    await loadPending();
+  });
+
+  // -------------------------------
+  // Assets - Create
+  // -------------------------------
+  const btnCreateAsset = document.getElementById("btnCreateAsset");
+  const assetCreateMsg = document.getElementById("assetCreateMsg");
+
+  btnCreateAsset.addEventListener("click", async () => {
+    assetCreateMsg.textContent = "Creating...";
+    assetCreateMsg.className = "msg";
+
+    const payload = {
+      asset_name: document.getElementById("asset_name").value.trim(),
+      fixed_asset_type_id: document.getElementById("fixed_asset_type_id").value.trim(),
+      purchase_date: document.getElementById("purchase_date").value,
+      purchase_value: Number(document.getElementById("purchase_value").value || 0),
+      total_life: Number(document.getElementById("total_life").value || 0),
+      branch_id: document.getElementById("branch_id").value.trim(),
+      location_id: document.getElementById("location_id").value.trim(),
+      description: document.getElementById("asset_description").value.trim()
+    };
+
+    try {
+      const res = await fetch("/assets/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Create failed");
+
+      assetCreateMsg.textContent = "Created: " + (data?.fixed_asset?.fixed_asset_id || "OK");
+      assetCreateMsg.classList.add("ok");
+    } catch (e) {
+      assetCreateMsg.textContent = e.message || "Error";
+      assetCreateMsg.classList.add("err");
+    }
+  });
+
+  // Assets - Retrieve
+  const btnLoadAssets = document.getElementById("btnLoadAssets");
+  const assetsLoadMsg = document.getElementById("assetsLoadMsg");
+  const assetsTableBody = document.querySelector("#assetsTable tbody");
+
+  btnLoadAssets.addEventListener("click", loadAssets);
+
+  async function loadAssets() {
+    assetsLoadMsg.textContent = "Loading...";
+    assetsLoadMsg.className = "msg";
+    assetsTableBody.innerHTML = "";
+
+    try {
+      const res = await fetch("/assets/all");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Load failed");
+
+      const list = data?.fixed_assets || data?.assets || [];
+      for (const a of list) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(a.fixed_asset_id || "")}</td>
+          <td>${escapeHtml(a.asset_name || "")}</td>
+          <td>${escapeHtml(a.status || "")}</td>
+          <td>${escapeHtml(a.asset_number || "")}</td>
+          <td>${escapeHtml(a.fixed_asset_type_name || a.fixed_asset_type_id || "")}</td>
+          <td>${escapeHtml(a.branch_name || a.branch_id || "")}</td>
+          <td>${escapeHtml(a.location_name || a.location_id || "")}</td>
+        `;
+        assetsTableBody.appendChild(tr);
+      }
+
+      assetsLoadMsg.textContent = "Loaded " + list.length;
+      assetsLoadMsg.classList.add("ok");
+    } catch (e) {
+      assetsLoadMsg.textContent = e.message || "Error";
+      assetsLoadMsg.classList.add("err");
+    }
+  }
+
+  // -------------------------------
+  // Expenses - Init dropdowns
+  // -------------------------------
+  let expensesInitialized = false;
+
+  async function initExpenses() {
+    if (expensesInitialized) return;
+    expensesInitialized = true;
+
+    await Promise.all([
+      loadExpenseAccounts(),
+      loadPaidThroughAccounts(),
+      loadVendors()
+    ]);
+  }
+
+  async function loadExpenseAccounts() {
+    const select = document.getElementById("pending_expense_account");
+    select.innerHTML = `<option value="">Loading...</option>`;
+    try {
+      const r1 = await fetch("/coa/expense-accounts");
+      const data = await r1.json();
+      if (!r1.ok) throw new Error(data?.detail || data?.message || "Failed to load expense accounts");
+      const items = data?.items || data?.accounts || [];
+      select.innerHTML = `<option value="">Select</option>`;
+      for (const it of items) {
+        const opt = document.createElement("option");
+        opt.value = it.account_id || it.id || it.value || "";
+        opt.textContent = it.account_name || it.name || it.label || opt.value;
+        select.appendChild(opt);
+      }
+    } catch (e) {
+      select.innerHTML = `<option value="">Error</option>`;
+    }
+  }
+
+  async function loadPaidThroughAccounts() {
+    const select = document.getElementById("pending_paid_through");
+    select.innerHTML = `<option value="">Loading...</option>`;
+    try {
+      const r2 = await fetch("/coa/paid-through-accounts");
+      const data = await r2.json();
+      if (!r2.ok) throw new Error(data?.detail || data?.message || "Failed to load paid through accounts");
+      const items = data?.items || data?.accounts || [];
+      select.innerHTML = `<option value="">Select</option>`;
+      for (const it of items) {
+        const opt = document.createElement("option");
+        opt.value = it.account_id || it.id || it.value || "";
+        opt.textContent = it.account_name || it.name || it.label || opt.value;
+        select.appendChild(opt);
+      }
+    } catch (e) {
+      select.innerHTML = `<option value="">Error</option>`;
+    }
+  }
+
+  async function loadVendors() {
+    const select = document.getElementById("pending_vendor");
+    select.innerHTML = `<option value="">Loading...</option>`;
+    try {
+      const res = await fetch("/vendors/list?page=1&per_page=200");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Failed to load vendors");
+      const items = data?.vendors || data?.items || [];
+      select.innerHTML = `<option value="">Select</option>`;
+      for (const v of items) {
+        const opt = document.createElement("option");
+        opt.value = v.vendor_id || v.id || "";
+        opt.textContent = v.vendor_name || v.name || opt.value;
+        select.appendChild(opt);
+      }
+    } catch (e) {
+      select.innerHTML = `<option value="">Error</option>`;
+    }
+  }
+
+  // -------------------------------
+  // Expenses - Create pending
+  // -------------------------------
+  const btnCreatePending = document.getElementById("btnCreatePending");
+  const pendingCreateMsg = document.getElementById("pendingCreateMsg");
+
+  btnCreatePending.addEventListener("click", async () => {
+    pendingCreateMsg.textContent = "Creating...";
+    pendingCreateMsg.className = "msg";
+
+    const payload = {
+      date: document.getElementById("pending_date").value,
+      amount: Number(document.getElementById("pending_amount").value || 0),
+      expense_account_id: document.getElementById("pending_expense_account").value,
+      paid_through_account_id: document.getElementById("pending_paid_through").value,
+      vendor_id: document.getElementById("pending_vendor").value,
+      description: document.getElementById("pending_description").value.trim()
+    };
+
+    try {
+      const res = await fetch("/pending-expenses/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Create failed");
+
+      const pendingId = data?.pending_expense?.pending_expense_id || data?.pending_expense_id;
+
+      // optional attachment upload
+      const fileInput = document.getElementById("pending_attachment");
+      const file = fileInput.files && fileInput.files[0];
+      if (file && pendingId) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const r2 = await fetch(`/pending-expenses/${pendingId}/attachments`, { method: "POST", body: fd });
+        const d2 = await r2.json().catch(() => ({}));
+        if (!r2.ok) throw new Error(d2?.detail || d2?.message || "Attachment upload failed");
+      }
+
+      pendingCreateMsg.textContent = "Created Pending: " + (pendingId || "OK");
+      pendingCreateMsg.classList.add("ok");
+    } catch (e) {
+      pendingCreateMsg.textContent = e.message || "Error";
+      pendingCreateMsg.classList.add("err");
+    }
+  });
+
+  // -------------------------------
+  // Expenses - Retrieve Zoho expenses
+  // -------------------------------
+  const btnLoadZohoExpenses = document.getElementById("btnLoadZohoExpenses");
+  const zohoLoadMsg = document.getElementById("zohoLoadMsg");
+  const zohoTableBody = document.querySelector("#zohoExpensesTable tbody");
+
+  btnLoadZohoExpenses.addEventListener("click", loadZohoExpenses);
+
+  async function loadZohoExpenses() {
+    zohoLoadMsg.textContent = "Loading...";
+    zohoLoadMsg.className = "msg";
+    zohoTableBody.innerHTML = "";
+
+    const from = document.getElementById("zoho_from").value;
+    const to = document.getElementById("zoho_to").value;
+    const search = document.getElementById("zoho_search").value.trim();
+
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (search) params.set("search", search);
+
+    try {
+      const res = await fetch("/expenses/list?" + params.toString());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Load failed");
+
+      const list = data?.expenses || data?.items || [];
+      for (const e of list) {
+        const tr = document.createElement("tr");
+        const att = (e.attachments || []).map(a => escapeHtml(a.attachment_name || a.file_name || a.attachment_id || "")).join(", ");
+        tr.innerHTML = `
+          <td>${escapeHtml(e.expense_id || "")}</td>
+          <td>${escapeHtml(e.date || "")}</td>
+          <td>${escapeHtml(e.vendor_name || e.vendor || "")}</td>
+          <td>${escapeHtml(String(e.total || e.amount || ""))}</td>
+          <td>${escapeHtml(e.status || "")}</td>
+          <td>${escapeHtml(e.description || "")}</td>
+          <td>${att}</td>
+        `;
+        zohoTableBody.appendChild(tr);
+      }
+
+      zohoLoadMsg.textContent = "Loaded " + list.length;
+      zohoLoadMsg.classList.add("ok");
+    } catch (e) {
+      zohoLoadMsg.textContent = e.message || "Error";
+      zohoLoadMsg.classList.add("err");
+    }
+  }
+
+  // Upload attachment to Zoho expense
+  const btnUploadZohoAttachment = document.getElementById("btnUploadZohoAttachment");
+  const zohoUploadMsg = document.getElementById("zohoUploadMsg");
+
+  btnUploadZohoAttachment.addEventListener("click", async () => {
+    zohoUploadMsg.textContent = "Uploading...";
+    zohoUploadMsg.className = "msg";
+
+    const expenseId = document.getElementById("zoho_expense_id").value.trim();
+    const file = document.getElementById("zoho_expense_file").files?.[0];
+
+    if (!expenseId) {
+      zohoUploadMsg.textContent = "Expense ID required";
+      zohoUploadMsg.classList.add("err");
+      return;
+    }
+    if (!file) {
+      zohoUploadMsg.textContent = "File required";
+      zohoUploadMsg.classList.add("err");
+      return;
+    }
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const res = await fetch(`/expenses/${encodeURIComponent(expenseId)}/attachments`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Upload failed");
+
+      zohoUploadMsg.textContent = "Uploaded";
+      zohoUploadMsg.classList.add("ok");
+    } catch (e) {
+      zohoUploadMsg.textContent = e.message || "Error";
+      zohoUploadMsg.classList.add("err");
+    }
+  });
+
+  // -------------------------------
+  // Pending list / approve / delete
+  // -------------------------------
+  const btnLoadPending = document.getElementById("btnLoadPending");
+  const pendingLoadMsg = document.getElementById("pendingLoadMsg");
+  const pendingTableBody = document.querySelector("#pendingTable tbody");
+
+  btnLoadPending.addEventListener("click", loadPending);
+
+  async function loadPending() {
+    pendingLoadMsg.textContent = "Loading...";
+    pendingLoadMsg.className = "msg";
+    pendingTableBody.innerHTML = "";
+
+    const from = document.getElementById("pending_from").value;
+    const to = document.getElementById("pending_to").value;
+
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+
+    try {
+      const res = await fetch("/pending-expenses/list?" + params.toString());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Load failed");
+
+      const list = data?.pending_expenses || data?.items || [];
+      for (const p of list) {
+        const tr = document.createElement("tr");
+
+        const approveBtn = `<button class="small primary" data-approve="${escapeHtml(p.pending_expense_id || "")}">Approve</button>`;
+        const delBtn = `<button class="small danger" data-delete="${escapeHtml(p.pending_expense_id || "")}">Delete</button>`;
+
+        const att = (p.attachments || []).map(a => escapeHtml(a.attachment_name || a.file_name || a.attachment_id || "")).join(", ");
+
+        tr.innerHTML = `
+          <td>${escapeHtml(p.pending_expense_id || "")}</td>
+          <td>${escapeHtml(p.date || "")}</td>
+          <td>${escapeHtml(p.vendor_name || p.vendor || "")}</td>
+          <td>${escapeHtml(String(p.amount || ""))}</td>
+          <td>${escapeHtml(p.expense_account_name || p.expense_account_id || "")}</td>
+          <td>${escapeHtml(p.paid_through_account_name || p.paid_through_account_id || "")}</td>
+          <td>${escapeHtml(p.description || "")}</td>
+          <td>${escapeHtml(p.status || "pending")}</td>
+          <td>${approveBtn}</td>
+          <td>${delBtn}</td>
+          <td>${att}</td>
+        `;
+
+        pendingTableBody.appendChild(tr);
+      }
+
+      pendingLoadMsg.textContent = "Loaded " + list.length;
+      pendingLoadMsg.classList.add("ok");
+    } catch (e) {
+      pendingLoadMsg.textContent = e.message || "Error";
+      pendingLoadMsg.classList.add("err");
+    }
+  }
+
+  pendingTableBody.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    if (!(t instanceof HTMLElement)) return;
+
+    const approveId = t.getAttribute("data-approve");
+    const deleteId = t.getAttribute("data-delete");
+
+    if (approveId) {
+      if (!confirm("Approve this pending expense?")) return;
+      try {
+        const res = await fetch(`/pending-expenses/${encodeURIComponent(approveId)}/approve`, { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.detail || data?.message || "Approve failed");
+        await loadPending();
+      } catch (e) {
+        alert(e.message || "Error");
+      }
+    }
+
+    if (deleteId) {
+      if (!confirm("Delete this pending expense?")) return;
+      try {
+        const res = await fetch("/pending-expenses/" + encodeURIComponent(deleteId), { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.detail || data?.message || "Delete failed");
+        await loadPending();
+      } catch (e) {
+        alert(e.message || "Error");
+      }
+    }
+  });
+
+  // Upload attachment to pending
+  const btnUploadPendingAttachment = document.getElementById("btnUploadPendingAttachment");
+  const pendingUploadMsg = document.getElementById("pendingUploadMsg");
+
+  btnUploadPendingAttachment.addEventListener("click", async () => {
+    pendingUploadMsg.textContent = "Uploading...";
+    pendingUploadMsg.className = "msg";
+
+    const pendingId = document.getElementById("pending_id_attach").value.trim();
+    const file = document.getElementById("pending_file_attach").files?.[0];
+
+    if (!pendingId) {
+      pendingUploadMsg.textContent = "Pending ID required";
+      pendingUploadMsg.classList.add("err");
+      return;
+    }
+    if (!file) {
+      pendingUploadMsg.textContent = "File required";
+      pendingUploadMsg.classList.add("err");
+      return;
+    }
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const res = await fetch(`/pending-expenses/${encodeURIComponent(pendingId)}/attachments`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || data?.message || "Upload failed");
+
+      pendingUploadMsg.textContent = "Uploaded";
+      pendingUploadMsg.classList.add("ok");
+    } catch (e) {
+      pendingUploadMsg.textContent = e.message || "Error";
+      pendingUploadMsg.classList.add("err");
+    }
+  });
+
+  // -------------------------------
+  // Helpers
+  // -------------------------------
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 </script>
 
 </body>
 </html>
-
