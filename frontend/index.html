@@ -1,0 +1,2456 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Assets & Expenses</title>
+  <link rel="stylesheet" href="/static/style.css?v=260">
+
+  <style>
+    .modalOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 18px;
+    }
+    .modalOverlay.hidden { display: none; }
+
+    .modalCard {
+      width: 100%;
+      max-width: 900px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.30);
+      overflow: hidden;
+    }
+    .modalTop {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .modalTitleWrap { display: flex; flex-direction: column; gap: 3px; }
+    .modalTitle { font-weight: 800; font-size: 16px; }
+    .modalSub { color: var(--muted); font-size: 12px; }
+
+    .modalBody { padding: 16px; }
+    .modalFooter {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .result.hidden { display:none; }
+
+    .homeGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .homeBtn {
+      width: 100%;
+      padding: 14px 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 12px;
+      font-weight: 800;
+      text-align: left;
+      cursor: pointer;
+    }
+    .homeBtn:hover { filter: brightness(0.98); }
+    .homeBtnSub {
+      display: block;
+      margin-top: 4px;
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .homeCashWrap {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .cashCard {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: var(--card);
+    }
+    .cashRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .cashKpi {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(0,0,0,0.02);
+    }
+    .cashKpiLabel { color: var(--muted); font-size: 12px; }
+    .cashKpiValue { font-size: 20px; font-weight: 900; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Left sidebar -->
+  <aside class="sidebar">
+    <div class="sidebarCard">
+      <div class="sidebarTitle">Navigation</div>
+
+      <button id="navHome" class="navBtn" type="button">Home</button>
+
+      <button id="navAssets" class="navBtn" type="button">Assets</button>
+      <div id="assetsSubnav" class="subnav hidden">
+        <button id="navAssetsCreate" class="navBtn subBtn" type="button">Create</button>
+        <button id="navAssetsRetrieve" class="navBtn subBtn" type="button">Retrieve</button>
+      </div>
+
+      <button id="navExpenses" class="navBtn" type="button">Expenses</button>
+      <div id="expensesSubnav" class="subnav hidden">
+        <button id="navExpensesCreate" class="navBtn subBtn" type="button">Create</button>
+        <button id="navExpensesApproved" class="navBtn subBtn" type="button">Approved</button>
+        <button id="navExpensesPending" class="navBtn subBtn" type="button">Pending</button>
+        <button id="navExpensesAccrued" class="navBtn subBtn" type="button">Accrued Expenses</button>
+      </div>
+
+      <button id="navUsers" class="navBtn hidden" type="button">Users</button>
+
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+<div class="topbar">
+  <div>
+    <div class="topbarTitle" id="pageTitle">Assets</div>
+    <div class="topbarHint" id="pageHint">Create / Retrieve assets</div>
+  </div>
+
+  <button class="btn" id="btnLogout" type="button" style="display:none;">
+    Logout
+  </button>
+</div>
+
+    <!-- LOGIN PANEL -->
+    <section id="panelLogin" class="panel">
+      <div class="card">
+        <div class="cardTitle">Login</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Email</label>
+            <input id="loginEmail" type="email" placeholder="name@company.com" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input id="loginPassword" type="password" placeholder="Your password" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnLogin" type="button">Login</button>
+          <div class="inlineHint" id="loginState"></div>
+        </div>
+
+        <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;" />
+
+        <div class="cardTitle">Accept Invite</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Invite Token</label>
+            <input id="inviteToken" type="text" placeholder="Paste invite token" />
+          </div>
+          <div class="field">
+            <label>Set Password (min 8)</label>
+            <input id="invitePassword" type="password" placeholder="New password" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnAcceptInvite" type="button">Accept Invite</button>
+          <div class="inlineHint" id="inviteState"></div>
+        </div>
+
+        <pre class="result" id="authResult"></pre>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section id="panelHome" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Home</div>
+
+        <div class="homeGrid">
+          <button class="homeBtn" id="btnHomeWings" type="button">
+            Wings
+            <span class="homeBtnSub">Expense module</span>
+          </button>
+
+          <button class="homeBtn" id="btnHomeLufthansa" type="button">
+            Lufthansa Group
+            <span class="homeBtnSub">Coming soon</span>
+          </button>
+
+          <button class="homeBtn" id="btnHomeLaveen" type="button">
+            Laveen Group
+            <span class="homeBtnSub">Coming soon</span>
+          </button>
+
+          <button class="homeBtn" id="btnHomeFreyWille" type="button">
+            FreyWille
+            <span class="homeBtnSub">Coming soon</span>
+          </button>
+
+          <button class="homeBtn" id="btnHomeBieder" type="button">
+            Bieder & Maier
+            <span class="homeBtnSub">Coming soon</span>
+          </button>
+
+          <button class="homeBtn" id="btnHomeIraqi" type="button">
+            Iraqi Airways
+            <span class="homeBtnSub">Coming soon</span>
+          </button>
+        </div>
+
+        <div class="homeCashWrap">
+          <div class="cashCard">
+            <div class="cardTitle" style="margin-bottom:6px;">Wings Cash Position</div>
+            <div class="inlineHint" id="wingsCashHint">Based on Zoho Petty Cash balance and pending expenses.</div>
+
+            <div class="actions" style="margin-top:10px;">
+              <button class="btn primary" id="btnRefreshWingsCash" type="button">Refresh Cash</button>
+              <div class="inlineHint" id="wingsCashStatus"></div>
+            </div>
+
+            <div class="cashRow">
+              <div class="cashKpi">
+                <div class="cashKpiLabel">Zoho Cash (after approved)</div>
+                <div class="cashKpiValue" id="wingsCashAfter">—</div>
+              </div>
+              <div class="cashKpi">
+                <div class="cashKpiLabel">Cash before approval (Zoho minus pending)</div>
+                <div class="cashKpiValue" id="wingsCashBefore">—</div>
+              </div>
+              <div class="cashKpi">
+                <div class="cashKpiLabel">Pending expenses (not approved)</div>
+                <div class="cashKpiValue" id="wingsCashPending">—</div>
+              </div>
+              <div class="cashKpi">
+                <div class="cashKpiLabel">Petty Cash Account</div>
+                <div class="cashKpiValue" id="wingsCashAccount">—</div>
+              </div>
+            </div>
+
+            <pre class="result hidden" id="wingsCashRaw"></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Panels -->
+    <section id="panelAssetsCreate" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Create Asset</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Asset Name</label>
+            <input id="assetName" type="text" placeholder="e.g. MacBook Pro" />
+          </div>
+
+          <div class="field">
+            <label>Fixed Asset Type</label>
+            <select id="assetType"></select>
+          </div>
+
+          <div class="field">
+            <label>Branch</label>
+            <select id="assetBranch"></select>
+          </div>
+
+          <div class="field">
+            <label>Location</label>
+            <select id="assetLocation"></select>
+          </div>
+
+          <div class="field">
+            <label>Purchase Quantity</label>
+            <input id="purchaseQty" type="number" step="0.01" value="1" />
+          </div>
+
+          <div class="field">
+            <label>Total Life</label>
+            <input id="totalLife" type="number" placeholder="e.g. 30" />
+          </div>
+
+          <div class="field">
+            <label>Total Life Basis</label>
+            <select id="totalLifeBasis">
+              <option value="months">months</option>
+              <option value="years">years</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Depreciation Method</label>
+            <select id="depreciationMethod">
+              <option value="straight_line">straight_line</option>
+              <option value="declining_balance">declining_balance</option>
+            </select>
+          </div>
+
+          <div class="field span2">
+            <label>Description</label>
+            <textarea id="assetDescription" rows="3" placeholder="Optional"></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnCreateAsset" type="button">Create Asset</button>
+          <button class="btn" id="btnResetAsset" type="button">Reset</button>
+        </div>
+
+        <pre class="result" id="assetCreateResult"></pre>
+      </div>
+    </section>
+
+    <section id="panelAssetsRetrieve" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Retrieve Assets</div>
+        <div class="actions">
+          <button class="btn primary" id="btnRefreshAssets" type="button">Refresh</button>
+        </div>
+        <div class="tableWrap">
+          <table class="table" id="assetsTable">
+            <thead>
+              <tr>
+                <th>Asset Name</th>
+                <th>Asset Number</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Branch</th>
+                <th>Location</th>
+                <th>Qty</th>
+                <th>Life</th>
+                <th>Method</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <pre class="result" id="assetsRetrieveResult"></pre>
+      </div>
+    </section>
+
+    <!-- EXPENSES: CREATE -->
+    <section id="panelExpensesCreate" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Create Expense</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Expense Type</label>
+            <select id="expenseType">
+              <option value="ordinary">Ordinary</option>
+              <option value="accrued">Accrued</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Date</label>
+            <input id="expenseDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label>Vendor</label>
+            <select id="expenseVendorSelect">
+              <option value="">Select vendor</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Or Vendor Name</label>
+            <input id="expenseVendorName" type="text" placeholder="Optional if selected above" />
+          </div>
+
+          <div class="field">
+            <label>Reference #</label>
+            <input id="expenseRef" type="text" placeholder="Optional" />
+          </div>
+
+          <div class="field">
+            <label>Expense Account</label>
+            <select id="expenseAccount"></select>
+          </div>
+
+          <div class="field">
+            <label>Paid Through</label>
+            <select id="paidThrough"></select>
+            <div class="inlineHint" id="paidThroughHint"></div>
+          </div>
+
+          <div class="field">
+            <label>Amount</label>
+            <input id="expenseAmount" type="number" step="0.01" />
+          </div>
+
+          <div class="field">
+            <label>Receipt</label>
+            <input type="file" class="hidden" id="expenseReceiptFile" accept="image/*,application/pdf">
+            <button class="btn" id="btnExpenseAttach" type="button">Attach</button>
+            <div class="inlineHint" id="expenseReceiptName"></div>
+          </div>
+
+          <div class="field span2">
+            <label>Description</label>
+            <textarea id="expenseDescription" rows="3" placeholder="Optional"></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnCreateExpense" type="button">Create Expense</button>
+          <button class="btn" id="btnResetExpense" type="button">Reset</button>
+        </div>
+
+        <pre class="result hidden" id="expenseCreateResult"></pre>
+      </div>
+    </section>
+
+    <!-- EXPENSES: APPROVED -->
+    <section id="panelExpensesApproved" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Approved Expenses</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Start Date (optional)</label>
+            <input id="approvedStartDate" type="date" />
+          </div>
+          <div class="field">
+            <label>End Date (optional)</label>
+            <input id="approvedEndDate" type="date" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnRefreshApproved" type="button">Refresh</button>
+          <button class="btn" id="btnClearApprovedFilter" type="button">Clear Filter</button>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="approvedTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Type</th>
+                <th>Receipt</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <pre class="result" id="approvedResult"></pre>
+      </div>
+    </section>
+
+    <!-- EXPENSES: PENDING -->
+    <section id="panelExpensesPending" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Pending Expenses</div>
+        <div class="actions">
+          <button class="btn primary" id="btnRefreshPending" type="button">Refresh</button>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="pendingTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Type</th>
+                <th>Receipt</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <pre class="result" id="pendingResult"></pre>
+      </div>
+    </section>
+
+    <!-- ACCRUED EXPENSES -->
+    <section id="panelExpensesAccrued" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Accrued Expenses</div>
+        <div class="actions">
+          <button class="btn primary" id="btnRefreshAccrued" type="button">Refresh</button>
+          <button class="btn" id="btnToggleCleared" type="button">Show Cleared: Off</button>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="accruedTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vendor</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Type</th>
+                <th>Balance</th>
+                <th>Receipt</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <pre class="result" id="accruedResult"></pre>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section id="panelUsers" class="panel hidden">
+      <div class="card">
+        <div class="cardTitle">Users (Admin)</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Invite Email</label>
+            <input id="inviteEmailAdmin" type="email" placeholder="user@company.com" />
+          </div>
+          <div class="field">
+            <label>Role</label>
+            <select id="inviteRoleAdmin">
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnInviteUser" type="button">Invite</button>
+          <div class="inlineHint" id="inviteTokenOut"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnRefreshUsers" type="button">Refresh Users</button>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="usersTable">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Active</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <pre class="result" id="usersResult"></pre>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- PROFESSIONAL EDIT MODAL -->
+<div id="editOverlay" class="modalOverlay hidden">
+  <div class="modalCard">
+    <div class="modalTop">
+      <div class="modalTitleWrap">
+        <div class="modalTitle">Edit Expense</div>
+        <div class="modalSub" id="editSubtitle">Update expense details</div>
+      </div>
+      <button class="btn" id="btnEditClose" type="button">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid2">
+        <div class="field">
+          <label>Expense Type</label>
+          <select id="editExpenseType">
+            <option value="ordinary">Ordinary</option>
+            <option value="accrued">Accrued</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Date</label>
+          <input id="editDate" type="date" />
+        </div>
+
+        <div class="field">
+          <label>Vendor</label>
+          <select id="editVendorSelect">
+            <option value="">Select vendor</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Or Vendor Name</label>
+          <input id="editVendorName" type="text" placeholder="Optional if selected above" />
+        </div>
+
+        <div class="field">
+          <label>Reference #</label>
+          <input id="editRef" type="text" placeholder="Optional" />
+        </div>
+
+        <div class="field">
+          <label>Expense Account</label>
+          <select id="editExpenseAccount"></select>
+        </div>
+
+        <div class="field">
+          <label>Paid Through</label>
+          <select id="editPaidThrough"></select>
+          <div class="inlineHint" id="editPaidThroughHint"></div>
+        </div>
+
+        <div class="field">
+          <label>Amount</label>
+          <input id="editAmount" type="number" step="0.01" />
+        </div>
+
+        <div class="field span2">
+          <label>Description</label>
+          <textarea id="editDescription" rows="3" placeholder="Optional"></textarea>
+        </div>
+      </div>
+
+      <div class="inlineHint" id="editState"></div>
+      <pre class="result hidden" id="editResult"></pre>
+    </div>
+
+    <div class="modalFooter">
+      <button class="btn" id="btnEditCancel" type="button">Cancel</button>
+      <button class="btn primary" id="btnEditSave" type="button">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFESSIONAL CLEAR MODAL -->
+<div id="clearOverlay" class="modalOverlay hidden">
+  <div class="modalCard">
+    <div class="modalTop">
+      <div class="modalTitleWrap">
+        <div class="modalTitle">Clear Accrued Expense</div>
+        <div class="modalSub" id="clearSubtitle">Record a clearing payment</div>
+      </div>
+      <button class="btn" id="btnClearClose" type="button">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid2">
+        <div class="field">
+          <label>Paid Through Name</label>
+          <input id="clearPaidName" type="text" placeholder="e.g. Petty Cash / Bank" />
+        </div>
+
+        <div class="field">
+          <label>Paid Through Account ID (auto)</label>
+          <input id="clearPaidId" type="text" placeholder="Auto" readonly />
+          <div class="inlineHint">This is auto-selected (Petty Cash).</div>
+        </div>
+
+        <div class="field">
+          <label>Amount</label>
+          <input id="clearAmount" type="number" step="0.01" />
+        </div>
+
+        <div class="field">
+          <label>Date (optional)</label>
+          <input id="clearDate" type="date" />
+        </div>
+      </div>
+
+      <pre class="result hidden" id="clearResult"></pre>
+    </div>
+
+    <div class="modalFooter">
+      <button class="btn" id="btnClearCancel" type="button">Cancel</button>
+      <button class="btn primary" id="btnClearSave" type="button">Submit Clearing</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER EDIT MODAL (ADMIN) -->
+<div id="userEditOverlay" class="modalOverlay hidden">
+  <div class="modalCard">
+    <div class="modalTop">
+      <div class="modalTitleWrap">
+        <div class="modalTitle">Edit User</div>
+        <div class="modalSub">Role and cash access</div>
+      </div>
+      <button class="btn" id="btnUserEditClose" type="button">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid2">
+        <div class="field">
+          <label>Email</label>
+          <input id="userEditEmail" type="email" readonly />
+        </div>
+
+        <div class="field">
+          <label>Role</label>
+          <select id="userEditRole">
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+
+        <div class="field span2">
+          <label>Allowed Cash Accounts</label>
+          <select id="userEditCash" multiple size="6"></select>
+          <div class="inlineHint">
+            Select one or more paid-through accounts this user can use.
+          </div>
+        </div>
+      </div>
+
+      <pre class="result hidden" id="userEditResult"></pre>
+    </div>
+
+    <div class="modalFooter">
+      <button class="btn" id="btnUserEditCancel" type="button">Cancel</button>
+      <button class="btn primary" id="btnUserEditSave" type="button">
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+  const API = {
+    assets: "/api/assets",
+    expenses: "/api/expenses",
+    pending: "/api/pending",
+    coa: "/api/coa",
+    vendors: "/api/vendors",
+    auth: "/api/auth",
+    receipts: "/api/receipts",
+    accrued: "/api/accrued",
+    cash: "/api/cash",
+  };
+async function refreshWingsCash() {
+  try {
+    if (!ME) {
+      console.warn("No current user loaded");
+      return;
+    }
+
+    let accountId = null;
+
+    // 1️⃣ Normal users: use assigned default
+    if (Array.isArray(ME.allowed_cash_accounts) && ME.allowed_cash_accounts.length) {
+      accountId = ME.allowed_cash_accounts[0];
+    }
+
+    // 2️⃣ Admin fallback: use detected petty cash
+    if (!accountId && ME.role === "admin") {
+      // ensure petty cash is detected
+      if (!WINGS_PETTY_CASH_ID) {
+        await refreshExpenseDropdowns(); // safe, idempotent
+      }
+      accountId = WINGS_PETTY_CASH_ID;
+    }
+
+    if (!accountId) {
+      throw new Error("No cash account assigned to user");
+    }
+
+    const r = await apiGet(
+      `${API.cash}/wings?account_id=${encodeURIComponent(accountId)}`
+    );
+
+    document.getElementById("wingsCashAfter").textContent =
+      fmtMoney(r.zoho_cash_after_approved);
+
+    document.getElementById("wingsCashPending").textContent =
+      fmtMoney(r.pending_not_approved_total);
+
+    document.getElementById("wingsCashBefore").textContent =
+      fmtMoney(r.cash_before_approval);
+
+    document.getElementById("wingsCashAccount").textContent =
+      r.account_name || "—";
+
+  } catch (e) {
+    console.error("refreshWingsCash failed:", e);
+  }
+}
+
+
+
+
+// backward compatibility – do not remove
+async function refreshWingsCashHome() {
+  return refreshWingsCash();
+}
+
+
+
+
+  let AUTH_TOKEN = localStorage.getItem("auth_token") || "";
+  let ME = null;
+  let SHOW_CLEARED = false;
+
+  // Company context (only Wings wired right now)
+  let ACTIVE_COMPANY = localStorage.getItem("active_company") || "wings";
+
+  // Create Expense receipt (optional)
+  let CREATE_RECEIPT_FILE = null;
+
+  // Dropdown data cache (so edit modal can reuse)
+  let ACCRUED_ACCOUNT = null;
+  let CACHED_PAID_THROUGH = [];
+  let CACHED_EXPENSE_ACCOUNTS = [];
+  let CACHED_VENDORS = [];
+
+  // Edit modal state
+  let EDIT_EXPENSE_ID = null;
+
+  // Clear modal state
+  let CLEAR_EXPENSE_ID = null;
+
+  // Auto-detected petty cash account (Wings)
+  let WINGS_PETTY_CASH_ID = "";
+  let WINGS_PETTY_CASH_NAME = "Petty Cash";
+
+  // --------------------------
+  // Navigation helpers
+  // --------------------------
+  function showPanel(panelId, title, hint) {
+    document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
+    document.getElementById(panelId).classList.remove("hidden");
+    document.getElementById("pageTitle").textContent = title;
+    document.getElementById("pageHint").textContent = hint;
+  }
+
+  function toggleSubnav(btnId, subnavId) {
+    const btn = document.getElementById(btnId);
+    const sub = document.getElementById(subnavId);
+    btn.addEventListener("click", () => {
+      sub.classList.toggle("hidden");
+    });
+  }
+
+  toggleSubnav("navAssets", "assetsSubnav");
+  toggleSubnav("navExpenses", "expensesSubnav");
+
+  // --------------------------
+  // API helpers (with auth)
+  // --------------------------
+  function authHeaders(extra) {
+    const h = Object.assign({}, extra || {});
+    if (AUTH_TOKEN) h["Authorization"] = `Bearer ${AUTH_TOKEN}`;
+    return h;
+  }
+
+  async function apiGet(url) {
+    const r = await fetch(url, { cache: "no-store", headers: authHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
+
+  async function apiPost(url, payload) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      cache: "no-store",
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
+
+  async function apiPatch(url, payload) {
+    const r = await fetch(url, {
+      method: "PATCH",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      cache: "no-store",
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
+
+  async function apiDelete(url) {
+    const r = await fetch(url, { method: "DELETE", cache: "no-store", headers: authHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
+
+  async function apiUploadReceipt(expenseId, file) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch(`${API.receipts}/upload/${expenseId}`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
+
+  function setResult(id, data) {
+    document.getElementById(id).textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  }
+
+  function setCreateExpenseMessage(msg) {
+    const el = document.getElementById("expenseCreateResult");
+    if (!msg) {
+      el.textContent = "";
+      el.classList.add("hidden");
+      return;
+    }
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  }
+
+  // Robust extraction of expense_id from any response shape
+  function extractExpenseId(resp) {
+    if (!resp || typeof resp !== "object") return null;
+
+    // common direct shapes
+    if (resp.expense_id) return resp.expense_id;
+    if (resp.id) return resp.id;
+
+    if (resp.expense && typeof resp.expense === "object") {
+      if (resp.expense.expense_id) return resp.expense.expense_id;
+      if (resp.expense.id) return resp.expense.id;
+    }
+
+    if (resp.pending) {
+      if (Array.isArray(resp.pending) && resp.pending[0] && resp.pending[0].expense_id) return resp.pending[0].expense_id;
+      if (typeof resp.pending === "object" && resp.pending.expense_id) return resp.pending.expense_id;
+    }
+
+    if (resp.data && typeof resp.data === "object") {
+      if (resp.data.expense_id) return resp.data.expense_id;
+      if (resp.data.expense && resp.data.expense.expense_id) return resp.data.expense.expense_id;
+    }
+
+    // last resort: shallow scan
+    for (const k of Object.keys(resp)) {
+      const v = resp[k];
+      if (v && typeof v === "object") {
+        if (v.expense_id) return v.expense_id;
+        if (v.expense && v.expense.expense_id) return v.expense.expense_id;
+      }
+    }
+
+    return null;
+  }
+
+
+// --------------------------
+// Auth
+// --------------------------
+
+async function loadMe() {
+  if (!AUTH_TOKEN) return null;
+  try {
+    const me = await apiGet(`${API.auth}/me`);
+    ME = me;
+    return me;
+  } catch (e) {
+    AUTH_TOKEN = "";
+    localStorage.removeItem("auth_token");
+    ME = null;
+    return null;
+  }
+}
+
+function applyRoleUI() {
+  const isAdmin = ME && ME.role === "admin";
+  document.getElementById("navUsers").classList.toggle("hidden", !isAdmin);
+}
+
+function enterApp() {
+  document.getElementById("panelLogin").classList.add("hidden");
+  document.getElementById("btnLogout").style.display = "inline-block";
+  showPanel("panelHome", "Home", "Choose a company module");
+  refreshExpenseDropdowns();
+  refreshWingsCash();
+}
+
+function enterLogin() {
+  document.getElementById("btnLogout").style.display = "none";
+  showPanel("panelLogin", "Login", "Sign in to continue");
+}
+
+/* ---------- LOGIN ---------- */
+document.getElementById("btnLogin").addEventListener("click", async () => {
+  try {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    if (!email || !password) {
+      setResult("authResult", "Email and password required");
+      return;
+    }
+
+    const resp = await apiPost(`${API.auth}/login`, { email, password });
+    if (!resp.token) throw new Error("Login failed: no token returned");
+
+    AUTH_TOKEN = resp.token;
+    localStorage.setItem("auth_token", AUTH_TOKEN);
+
+    const me = await loadMe();
+    if (!me) throw new Error("Login failed: could not load user");
+
+    applyRoleUI();
+
+    document.getElementById("loginState").textContent =
+      `Logged in as ${me.email} (${me.role})`;
+
+    setResult("authResult", "");
+    enterApp();
+  } catch (e) {
+    console.error("LOGIN ERROR:", e);
+    setResult("authResult", e.message);
+  }
+});
+
+/* ===========================
+   USER CASH ACCESS HELPERS
+   =========================== */
+
+function userAllowedPaidThroughIds() {
+  if (!ME) return [];
+
+  // Admins see everything
+  if (ME.role === "admin") {
+    return null;
+  }
+
+  // Normal users: enforce allowed cash accounts
+  if (Array.isArray(ME.allowed_cash_accounts)) {
+    return ME.allowed_cash_accounts.map(String);
+  }
+
+  return [];
+}
+
+/* ---------- LOGOUT ---------- */
+// (your logout handler stays here)
+
+
+document.getElementById("btnLogout").addEventListener("click", () => {
+  AUTH_TOKEN = "";
+  ME = null;
+
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("active_company");
+
+  document.getElementById("loginState").textContent = "Logged out";
+  enterLogin();
+});
+
+
+/* ---------- ACCEPT INVITE ---------- */
+document.getElementById("btnAcceptInvite").addEventListener("click", async () => {
+  try {
+    const invite_token = document.getElementById("inviteToken").value.trim();
+    const password = document.getElementById("invitePassword").value;
+    const resp = await apiPost(`${API.auth}/accept`, { invite_token, password });
+    document.getElementById("inviteState").textContent =
+      "Invite accepted. You can now log in.";
+    setResult("authResult", resp);
+  } catch (e) {
+    setResult("authResult", e.message);
+  }
+});
+/* ---------- ADMIN INVITE USER ---------- */
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("btnInviteUser");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    try {
+      const emailEl = document.getElementById("inviteEmailAdmin");
+      const roleEl = document.getElementById("inviteRoleAdmin");
+      const outEl = document.getElementById("inviteTokenOut");
+
+      const email = emailEl.value.trim();
+      const role = roleEl.value;
+
+      if (!email) throw new Error("Email is required");
+
+      const resp = await apiPost(`${API.auth}/invite`, {
+        email,
+        role,
+        allowed_cash_accounts: [],
+      });
+
+      outEl.textContent = `Invite token: ${resp.invite_token}`;
+      emailEl.value = "";
+    } catch (e) {
+      setResult("usersResult", e.message);
+    }
+  });
+});
+
+  // --------------------------
+  // Sidebar navigation
+  // --------------------------
+  document.getElementById("navHome").addEventListener("click", () => {
+    showPanel("panelHome", "Home", "Choose a company module");
+    refreshWingsCash();
+  });
+
+  document.getElementById("navAssetsCreate").addEventListener("click", () => {
+    showPanel("panelAssetsCreate", "Assets", "Create asset");
+  });
+
+  document.getElementById("navAssetsRetrieve").addEventListener("click", () => {
+    showPanel("panelAssetsRetrieve", "Assets", "Retrieve assets");
+    refreshAssets();
+  });
+
+  document.getElementById("navExpensesCreate").addEventListener("click", () => {
+    showPanel("panelExpensesCreate", "Expenses", "Create expense");
+    refreshExpenseDropdowns();
+  });
+
+  document.getElementById("navExpensesApproved").addEventListener("click", () => {
+    showPanel("panelExpensesApproved", "Expenses", "Approved expenses (current month by default)");
+    refreshApproved();
+  });
+
+  document.getElementById("navExpensesPending").addEventListener("click", () => {
+    showPanel("panelExpensesPending", "Expenses", "Pending expenses");
+    refreshPending();
+  });
+
+  document.getElementById("navExpensesAccrued").addEventListener("click", () => {
+    showPanel("panelExpensesAccrued", "Expenses", "Accrued expenses + clearing");
+    refreshAccrued();
+  });
+
+  document.getElementById("navUsers").addEventListener("click", () => {
+    showPanel("panelUsers", "Users", "Admin user management");
+    refreshUsers();
+  });
+
+  // --------------------------
+  // Home buttons
+  // --------------------------
+  function setActiveCompany(key) {
+    ACTIVE_COMPANY = key;
+    localStorage.setItem("active_company", key);
+  }
+
+  document.getElementById("btnHomeWings").addEventListener("click", () => {
+    setActiveCompany("wings");
+    showPanel("panelExpensesCreate", "Wings", "Create expense");
+    refreshExpenseDropdowns();
+  });
+
+  function comingSoon(name) {
+    const st = document.getElementById("wingsCashStatus");
+    st.textContent = `${name} module is coming soon.`;
+    setTimeout(() => { st.textContent = ""; }, 2500);
+  }
+
+  document.getElementById("btnHomeLufthansa").addEventListener("click", () => comingSoon("Lufthansa Group"));
+  document.getElementById("btnHomeLaveen").addEventListener("click", () => comingSoon("Laveen Group"));
+  document.getElementById("btnHomeFreyWille").addEventListener("click", () => comingSoon("FreyWille"));
+  document.getElementById("btnHomeBieder").addEventListener("click", () => comingSoon("Bieder & Maier"));
+  document.getElementById("btnHomeIraqi").addEventListener("click", () => comingSoon("Iraqi Airways"));
+
+  // --------------------------
+  // Wings cash (requires backend endpoint GET /api/cash/wings)
+  // Response expected:
+  // {
+  //   petty_cash_account_id, petty_cash_account_name,
+  //   zoho_cash_after, pending_total, cash_before_approved
+  // }
+  // --------------------------
+  function fmtMoney(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    const n = Number(v);
+    if (!isFinite(n)) return "—";
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+async function renderCashDashboard() {
+  const container = document.getElementById("cashDashboard");
+  container.innerHTML = "";
+
+  const resp = await apiGet("/api/cash");
+  const cashboxes = resp.cashboxes || [];
+
+  if (cashboxes.length === 0) {
+    container.innerHTML = "<p>No cash account assigned. Contact admin.</p>";
+    return;
+  }
+
+  cashboxes.forEach(cb => {
+    const card = document.createElement("div");
+    card.className = "cash-card";
+
+    card.innerHTML = `
+      <h3>${cb.account_name}</h3>
+      <p>Cash after approval: ${fmtMoney(cb.zoho_cash_after_approved)}</p>
+      <p>Pending: ${fmtMoney(cb.pending_not_approved_total)}</p>
+      <p><strong>Cash before approval:</strong> ${fmtMoney(cb.cash_before_approval)}</p>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+
+
+
+  document.getElementById("btnRefreshWingsCash").addEventListener("click", refreshWingsCash);
+
+  // --------------------------
+  // Assets (unchanged behavior)
+  // --------------------------
+/* ===========================
+   ASSET DROPDOWNS
+   =========================== */
+async function loadAssetDropdowns() {
+  try {
+    const [types, branches, locations] = await Promise.all([
+      apiGet(`${API.assets}/types`),
+      apiGet(`${API.assets}/branches`),
+      apiGet(`${API.assets}/locations`),
+    ]);
+
+    const typeSel = document.getElementById("assetType");
+    typeSel.innerHTML = "";
+    (types.fixed_asset_types || []).forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.fixed_asset_type_id;
+      opt.textContent = t.fixed_asset_type_name;
+      typeSel.appendChild(opt);
+    });
+
+    const branchSel = document.getElementById("assetBranch");
+    branchSel.innerHTML = "<option value=''>None</option>";
+    (branches.branches || []).forEach(b => {
+      const opt = document.createElement("option");
+      opt.value = b.branch_id;
+      opt.textContent = b.branch_name;
+      branchSel.appendChild(opt);
+    });
+
+    const locSel = document.getElementById("assetLocation");
+    locSel.innerHTML = "<option value=''>None</option>";
+    (locations.locations || []).forEach(l => {
+      const opt = document.createElement("option");
+      opt.value = l.location_id;
+      opt.textContent = l.location_name;
+      locSel.appendChild(opt);
+    });
+  } catch (e) {
+    setResult("assetCreateResult", `Error loading dropdowns: ${e.message}`);
+  }
+}
+
+/* ===========================
+   ASSET LIST (SAFE)
+   =========================== */
+async function refreshAssets() {
+  try {
+    const resp = await apiGet(`${API.assets}/retrieve`);
+    const list = resp.fixed_assets || [];
+
+    const tbody = document.querySelector("#assetsTable tbody");
+    tbody.innerHTML = "";
+
+    list.forEach(a => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${a.asset_name || ""}</td>
+        <td>${a.asset_number || ""}</td>
+        <td>${a.status || ""}</td>
+        <td>${a.fixed_asset_type_name || ""}</td>
+        <td>${a.branch_name || ""}</td>
+        <td>${a.location_name || ""}</td>
+        <td>${a.current_quantity ?? ""}</td>
+        <td>${a.total_life ? `${a.total_life} ${a.total_life_basis || ""}` : ""}</td>
+        <td>${a.depreciation_method || ""}</td>
+        <td class="tdActions">
+          <button class="btn mini" disabled>Edit</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    setResult("assetsRetrieveResult", resp);
+  } catch (e) {
+    setResult("assetsRetrieveResult", e.message);
+  }
+}
+
+/* ===========================
+   ASSET ACTIONS
+   =========================== */
+document.getElementById("btnCreateAsset").addEventListener("click", async () => {
+  try {
+    const payload = {
+      asset_name: document.getElementById("assetName").value.trim(),
+      fixed_asset_type_id: document.getElementById("assetType").value,
+      branch_id: document.getElementById("assetBranch").value || null,
+      location_id: document.getElementById("assetLocation").value || null,
+      purchase_quantity: parseFloat(document.getElementById("purchaseQty").value || "1"),
+      total_life: document.getElementById("totalLife").value
+        ? parseInt(document.getElementById("totalLife").value, 10)
+        : null,
+      total_life_basis: document.getElementById("totalLifeBasis").value,
+      depreciation_method: document.getElementById("depreciationMethod").value,
+      description: document.getElementById("assetDescription").value || "",
+    };
+
+    if (!payload.asset_name) throw new Error("Asset name is required");
+    if (!payload.fixed_asset_type_id) throw new Error("Fixed asset type is required");
+
+    const resp = await apiPost(`${API.assets}/create`, payload);
+    setResult("assetCreateResult", resp);
+    refreshAssets();
+  } catch (e) {
+    setResult("assetCreateResult", e.message);
+  }
+});
+
+document.getElementById("btnResetAsset").addEventListener("click", () => {
+  document.getElementById("assetName").value = "";
+  document.getElementById("purchaseQty").value = "1";
+  document.getElementById("totalLife").value = "";
+  document.getElementById("assetDescription").value = "";
+  setResult("assetCreateResult", "");
+});
+
+document.getElementById("btnRefreshAssets").addEventListener("click", refreshAssets);
+
+// THEN functions that use it
+
+async function refreshExpenseDropdowns() {
+  try {
+    const [expenseAccounts, paidThrough, vendors, accrued] = await Promise.all([
+      apiGet(`${API.coa}/expense_accounts`),
+      apiGet(`${API.coa}/paid_through`),
+      apiGet(`${API.expenses}/vendors`),
+      apiGet(`${API.coa}/accrued_paid_through`),
+    ]);
+
+    // Cache data globally
+    ACCRUED_ACCOUNT = accrued.account || null;
+    CACHED_EXPENSE_ACCOUNTS = expenseAccounts.accounts || [];
+    CACHED_PAID_THROUGH = paidThrough.accounts || [];
+    CACHED_VENDORS = vendors.contacts || [];
+
+    // Auto-detect Wings petty cash
+    detectWingsPettyCashFromPaidThrough();
+
+    /* ============================
+       EXPENSE ACCOUNT DROPDOWN
+       ============================ */
+    const expSel = document.getElementById("expenseAccount");
+    expSel.innerHTML = "<option value=''>Select expense account</option>";
+
+    CACHED_EXPENSE_ACCOUNTS.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value =
+        a["Account ID"] ||
+        a["Account Id"] ||
+        a["account_id"] ||
+        "";
+
+      opt.textContent =
+        a["Account Name"] ||
+        a["account_name"] ||
+        "";
+
+      expSel.appendChild(opt);
+    });
+
+    expSel.value = "";
+
+    /* ============================
+       PAID THROUGH DROPDOWN (SECURED)
+       ============================ */
+    const paidSel = document.getElementById("paidThrough");
+    paidSel.innerHTML = "<option value=''>Select paid through</option>";
+
+    const allowedIds = userAllowedPaidThroughIds(); // 🔐 enforce user access
+
+    CACHED_PAID_THROUGH.forEach(a => {
+      const id =
+        a["Account ID"] ||
+        a["Account Id"] ||
+        a["account_id"] ||
+        "";
+
+      const name =
+        a["Account Name"] ||
+        a["account_name"] ||
+        "";
+
+      // Non-admin users only see allowed accounts
+      if (allowedIds && !allowedIds.includes(id)) return;
+
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = name;
+      paidSel.appendChild(opt);
+    });
+
+    paidSel.value = "";
+
+    /* ============================
+       VENDOR DROPDOWN
+       ============================ */
+    const venSel = document.getElementById("expenseVendorSelect");
+    venSel.innerHTML = "<option value=''>Select vendor</option>";
+
+    CACHED_VENDORS.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.contact_id;
+      opt.textContent = v.contact_name;
+      venSel.appendChild(opt);
+    });
+
+    venSel.value = "";
+
+    /* ============================
+       APPLY ACCRUED RULES
+       ============================ */
+    applyExpenseTypeUI();
+
+    /* ============================
+       AUTO-SELECT DEFAULT PAID THROUGH (ORDINARY)
+       ============================ */
+    const expenseType = document.getElementById("expenseType").value;
+
+    if (
+      expenseType === "ordinary" &&
+      Array.isArray(ME?.allowed_cash_accounts) &&
+      ME.allowed_cash_accounts.length
+    ) {
+      const defaultId = String(ME.allowed_cash_accounts[0]);
+
+      // Only auto-select if user hasn't chosen yet
+      if (!paidSel.value) {
+        const opt = Array.from(paidSel.options).find(
+          o => o.value === defaultId
+        );
+        if (opt) {
+          paidSel.value = defaultId;
+        }
+      }
+    }
+
+  } catch (e) {
+    setCreateExpenseMessage(`Error loading expense dropdowns: ${e.message}`);
+  }
+}
+
+  function ensureOption(selectEl, value, label) {
+    if (!value) return;
+    const exists = Array.from(selectEl.options).some(o => o.value === value);
+    if (!exists) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label || value;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  function extractIdName(acc) {
+    let id = "";
+    let name = "Accrued Expenses";
+
+    if (!acc) return { id, name };
+
+    if (typeof acc === "string") {
+      const parts = acc.split(",").map(x => (x || "").trim());
+      if (parts.length >= 2) {
+        id = parts[0] || "";
+        name = parts[1] || name;
+      }
+      return { id, name };
+    }
+
+    if (Array.isArray(acc)) {
+      id = (acc[0] || "").toString().trim();
+      name = (acc[1] || name).toString().trim();
+      return { id, name };
+    }
+
+    if (typeof acc === "object") {
+      id = (
+        acc["Account ID"] ||
+        acc["Account Id"] ||
+        acc["account_id"] ||
+        acc["id"] ||
+        ""
+      ).toString().trim();
+
+      name = (
+        acc["Account Name"] ||
+        acc["account_name"] ||
+        acc["name"] ||
+        name
+      ).toString().trim();
+
+      return { id, name };
+    }
+
+    return { id, name };
+  }
+
+  function applyExpenseTypeUI() {
+    const t = document.getElementById("expenseType").value;
+    const paidSel = document.getElementById("paidThrough");
+    const hint = document.getElementById("paidThroughHint");
+
+    if (t === "accrued") {
+      if (ACCRUED_ACCOUNT) {
+        const { id, name } = extractIdName(ACCRUED_ACCOUNT);
+        ensureOption(paidSel, id, name);
+        paidSel.value = id;
+        paidSel.disabled = true;
+        hint.textContent = `Accrued: Paid Through is enforced to "${name}"`;
+      } else {
+        paidSel.value = "";
+        paidSel.disabled = true;
+        hint.textContent = "Accrued: COA Accrued Expenses account not found.";
+      }
+    } else {
+      paidSel.disabled = false;
+      hint.textContent = "";
+    }
+  }
+
+  document.getElementById("expenseType").addEventListener("change", applyExpenseTypeUI);
+
+  function detectWingsPettyCashFromPaidThrough() {
+    if (!Array.isArray(CACHED_PAID_THROUGH)) return;
+
+    const match = CACHED_PAID_THROUGH.find(a => {
+      const nm = (a["Account Name"] || a["account_name"] || "").toString().toLowerCase().trim();
+      return nm === "petty cash" || nm.includes("petty cash");
+    });
+
+    if (match) {
+      WINGS_PETTY_CASH_ID = (match["Account ID"] || match["Account Id"] || match["account_id"] || "").toString().trim();
+      WINGS_PETTY_CASH_NAME = (match["Account Name"] || match["account_name"] || "Petty Cash").toString().trim();
+    }
+  }
+
+  // --------------------------
+  // Create: Receipt attach
+  // --------------------------
+  document.getElementById("btnExpenseAttach").addEventListener("click", () => {
+    document.getElementById("expenseReceiptFile").click();
+  });
+
+  document.getElementById("expenseReceiptFile").addEventListener("change", () => {
+    const inp = document.getElementById("expenseReceiptFile");
+    if (!inp.files || !inp.files[0]) {
+      CREATE_RECEIPT_FILE = null;
+      document.getElementById("expenseReceiptName").textContent = "";
+      return;
+    }
+    CREATE_RECEIPT_FILE = inp.files[0];
+    document.getElementById("expenseReceiptName").textContent = CREATE_RECEIPT_FILE.name;
+  });
+
+  // --------------------------
+  // Expenses: create -> pending
+  // --------------------------
+  document.getElementById("btnCreateExpense").addEventListener("click", async () => {
+    try {
+      setCreateExpenseMessage("");
+
+      const vendorSelectEl = document.getElementById("expenseVendorSelect");
+      const vendorId = vendorSelectEl.value || null;
+
+      const vendorNameTyped = document.getElementById("expenseVendorName").value.trim() || null;
+      const vendorNameFromSelect =
+        vendorId && vendorSelectEl.selectedIndex >= 0
+          ? (vendorSelectEl.options[vendorSelectEl.selectedIndex].textContent || "").trim()
+          : null;
+
+      const vendorName = vendorNameTyped || vendorNameFromSelect || null;
+
+      const payload = {
+        expense_type: document.getElementById("expenseType").value,
+        vendor_id: vendorId,
+        vendor_name: vendorName,
+        date: document.getElementById("expenseDate").value || null,
+        reference_number: document.getElementById("expenseRef").value.trim() || null,
+        expense_account_id: document.getElementById("expenseAccount").value,
+        paid_through_account_id: document.getElementById("paidThrough").value,
+        amount: parseFloat(document.getElementById("expenseAmount").value || "0"),
+        description: document.getElementById("expenseDescription").value || "",
+      };
+
+      if (!payload.expense_account_id) throw new Error("Expense account is required");
+      if (!payload.paid_through_account_id) throw new Error("Paid through is required");
+      if (!payload.amount || payload.amount <= 0) throw new Error("Amount must be > 0");
+      if (!payload.vendor_id && !payload.vendor_name) throw new Error("Select a vendor or enter vendor name");
+
+      const resp = await apiPost(`${API.expenses}/create`, payload);
+      const createdId = extractExpenseId(resp);
+
+      if (CREATE_RECEIPT_FILE && createdId) {
+        try {
+          await apiUploadReceipt(createdId, CREATE_RECEIPT_FILE);
+          document.getElementById("expenseReceiptName").textContent = `Uploaded: ${CREATE_RECEIPT_FILE.name}`;
+        } catch (e) {
+          setCreateExpenseMessage(`Receipt upload failed: ${e.message}`);
+        }
+      }
+
+      document.getElementById("btnResetExpense").click();
+      setCreateExpenseMessage("");
+
+      // refresh lists so receipt column updates immediately (ordinary + accrued)
+      refreshPending();
+      refreshApproved();
+      refreshAccrued();
+      refreshWingsCash();
+    } catch (e) {
+      setCreateExpenseMessage(e.message);
+    }
+  });
+
+  document.getElementById("btnResetExpense").addEventListener("click", () => {
+    document.getElementById("expenseType").value = "ordinary";
+    document.getElementById("expenseVendorSelect").value = "";
+    document.getElementById("expenseVendorName").value = "";
+    document.getElementById("expenseDate").value = "";
+    document.getElementById("expenseRef").value = "";
+    document.getElementById("expenseAmount").value = "";
+    document.getElementById("expenseDescription").value = "";
+    document.getElementById("expenseAccount").value = "";
+    document.getElementById("paidThrough").value = "";
+
+    CREATE_RECEIPT_FILE = null;
+    document.getElementById("expenseReceiptFile").value = "";
+    document.getElementById("expenseReceiptName").textContent = "";
+
+    setCreateExpenseMessage("");
+    applyExpenseTypeUI();
+  });
+
+  // --------------------------
+  // Receipt cell helpers
+  // --------------------------
+  function firstReceiptLink(exp) {
+    const recs = exp.receipts || [];
+    if (!recs.length) return "";
+    const r = recs[recs.length - 1];
+    return r && r.url ? r.url : "";
+  }
+
+  function renderReceiptCell(exp) {
+    const recs = exp.receipts || [];
+    const url = firstReceiptLink(exp);
+    if (!url) return `<span class="inlineHint">None</span>`;
+    const n = recs.length || 1;
+    return `<a class="linkBtn" href="${url}" target="_blank" rel="noopener">View${n > 1 ? ` (${n})` : ""}</a>`;
+  }
+
+  // --------------------------
+  // Professional Edit Modal
+  // --------------------------
+  function fillSelectFromCached(selectId, items, valueKeyFn, labelKeyFn, firstLabel) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = firstLabel ? `<option value="">${firstLabel}</option>` : "";
+    items.forEach(it => {
+      const opt = document.createElement("option");
+      opt.value = valueKeyFn(it);
+      opt.textContent = labelKeyFn(it);
+      sel.appendChild(opt);
+    });
+  }
+
+  function applyEditExpenseTypeUI() {
+    const t = document.getElementById("editExpenseType").value;
+    const paidSel = document.getElementById("editPaidThrough");
+    const hint = document.getElementById("editPaidThroughHint");
+
+    if (t === "accrued") {
+      if (ACCRUED_ACCOUNT) {
+        const { id, name } = extractIdName(ACCRUED_ACCOUNT);
+        ensureOption(paidSel, id, name);
+        paidSel.value = id;
+        paidSel.disabled = true;
+        hint.textContent = `Accrued: Paid Through is enforced to "${name}"`;
+      } else {
+        paidSel.value = "";
+        paidSel.disabled = true;
+        hint.textContent = "Accrued: COA Accrued Expenses account not found.";
+      }
+    } else {
+      paidSel.disabled = false;
+      hint.textContent = "";
+    }
+  }
+
+  function openEditModal(expenseId, exp) {
+    EDIT_EXPENSE_ID = expenseId;
+
+    // populate dropdowns from cached lists
+    fillSelectFromCached(
+      "editVendorSelect",
+      CACHED_VENDORS,
+      v => v.contact_id,
+      v => v.contact_name,
+      "Select vendor"
+    );
+
+    fillSelectFromCached(
+      "editExpenseAccount",
+      CACHED_EXPENSE_ACCOUNTS,
+      a => a["Account ID"] || a["Account Id"] || a["account_id"] || "",
+      a => a["Account Name"] || a["account_name"] || "",
+      "Select expense account"
+    );
+
+    fillSelectFromCached(
+      "editPaidThrough",
+      CACHED_PAID_THROUGH,
+      a => a["Account ID"] || a["Account Id"] || a["account_id"] || "",
+      a => a["Account Name"] || a["account_name"] || "",
+      "Select paid through"
+    );
+
+    document.getElementById("editSubtitle").textContent = `Expense ID: ${expenseId}`;
+    document.getElementById("editState").textContent = "";
+    const editRes = document.getElementById("editResult");
+    editRes.textContent = "";
+    editRes.classList.add("hidden");
+
+    document.getElementById("editExpenseType").value = (exp.expense_type || "ordinary").toLowerCase();
+    document.getElementById("editDate").value = exp.date || "";
+    document.getElementById("editRef").value = exp.reference_number || "";
+    document.getElementById("editAmount").value = exp.amount ?? "";
+    document.getElementById("editDescription").value = exp.description || "";
+
+    // vendor: prefer vendor_id if present
+    document.getElementById("editVendorSelect").value = exp.vendor_id || "";
+    document.getElementById("editVendorName").value = exp.vendor_name || "";
+
+    document.getElementById("editExpenseAccount").value = exp.expense_account_id || "";
+    document.getElementById("editPaidThrough").value = exp.paid_through_account_id || "";
+
+    applyEditExpenseTypeUI();
+
+    document.getElementById("editOverlay").classList.remove("hidden");
+  }
+
+  function closeEditModal() {
+    EDIT_EXPENSE_ID = null;
+    document.getElementById("editOverlay").classList.add("hidden");
+  }
+
+  document.getElementById("btnEditClose").addEventListener("click", closeEditModal);
+  document.getElementById("btnEditCancel").addEventListener("click", closeEditModal);
+  document.getElementById("editExpenseType").addEventListener("change", applyEditExpenseTypeUI);
+
+  async function loadExpenseForEdit(expenseId) {
+    const expResp = await apiGet(`${API.expenses}/${expenseId}`);
+    return expResp.expense;
+  }
+
+  document.getElementById("btnEditSave").addEventListener("click", async () => {
+    try {
+      if (!EDIT_EXPENSE_ID) return;
+
+      const vendorSel = document.getElementById("editVendorSelect");
+      const vendor_id = vendorSel.value || null;
+
+      const vendorNameTyped = document.getElementById("editVendorName").value.trim() || null;
+      const vendorNameFromSelect =
+        vendor_id && vendorSel.selectedIndex >= 0
+          ? (vendorSel.options[vendorSel.selectedIndex].textContent || "").trim()
+          : null;
+
+      const vendor_name = vendorNameTyped || vendorNameFromSelect || null;
+
+      const patch = {
+        expense_type: document.getElementById("editExpenseType").value,
+        date: document.getElementById("editDate").value || null,
+        vendor_id,
+        vendor_name,
+        reference_number: document.getElementById("editRef").value.trim() || null,
+        expense_account_id: document.getElementById("editExpenseAccount").value || null,
+        paid_through_account_id: document.getElementById("editPaidThrough").value || null,
+        amount: parseFloat(document.getElementById("editAmount").value || "0"),
+        description: document.getElementById("editDescription").value || "",
+      };
+
+      if (!patch.expense_account_id) throw new Error("Expense account is required");
+      if (!patch.paid_through_account_id) throw new Error("Paid through is required");
+      if (!patch.amount || patch.amount <= 0) throw new Error("Amount must be > 0");
+      if (!patch.vendor_id && !patch.vendor_name) throw new Error("Select a vendor or enter vendor name");
+
+      await apiPatch(`${API.expenses}/${EDIT_EXPENSE_ID}`, patch);
+
+      closeEditModal();
+      refreshApproved();
+      refreshPending();
+      refreshAccrued();
+      refreshWingsCash();
+    } catch (e) {
+      const editRes = document.getElementById("editResult");
+      editRes.textContent = e.message;
+      editRes.classList.remove("hidden");
+    }
+  });
+
+  // --------------------------
+  // Professional Clear Modal (auto Paid Through Account ID)
+  // --------------------------
+  function openClearModal(expenseId) {
+    CLEAR_EXPENSE_ID = expenseId;
+    document.getElementById("clearSubtitle").textContent = `Expense ID: ${expenseId}`;
+
+    // Default: Petty Cash auto
+    document.getElementById("clearPaidName").value = WINGS_PETTY_CASH_NAME || "Petty Cash";
+    document.getElementById("clearPaidId").value = WINGS_PETTY_CASH_ID || "";
+    document.getElementById("clearAmount").value = "";
+    document.getElementById("clearDate").value = "";
+
+    const r = document.getElementById("clearResult");
+    r.textContent = "";
+    r.classList.add("hidden");
+
+    document.getElementById("clearOverlay").classList.remove("hidden");
+  }
+
+  function closeClearModal() {
+    CLEAR_EXPENSE_ID = null;
+    document.getElementById("clearOverlay").classList.add("hidden");
+  }
+
+  document.getElementById("btnClearClose").addEventListener("click", closeClearModal);
+  document.getElementById("btnClearCancel").addEventListener("click", closeClearModal);
+
+  document.getElementById("btnClearSave").addEventListener("click", async () => {
+    try {
+      if (!CLEAR_EXPENSE_ID) return;
+
+      const paidName = document.getElementById("clearPaidName").value.trim();
+      let paidId = document.getElementById("clearPaidId").value.trim();
+      const amt = parseFloat(document.getElementById("clearAmount").value || "0");
+      const dt = document.getElementById("clearDate").value || null;
+
+      if (!paidName) throw new Error("Paid Through Name is required");
+
+      // Auto fallback: try re-detect if empty
+      if (!paidId) {
+        detectWingsPettyCashFromPaidThrough();
+        paidId = (WINGS_PETTY_CASH_ID || "").trim();
+      }
+      if (!paidId) throw new Error("Paid Through Account ID could not be auto-detected. Refresh dropdowns and try again.");
+
+      if (!amt || amt <= 0) throw new Error("Amount must be > 0");
+
+      await apiPost(`${API.accrued}/${CLEAR_EXPENSE_ID}/clear`, {
+        paid_through_account_id: paidId,
+        paid_through_account_name: paidName,
+        amount: amt,
+        date: dt,
+      });
+
+      closeClearModal();
+      setResult("accruedResult", "");
+      refreshAccrued();
+      refreshWingsCash();
+    } catch (e) {
+      const r = document.getElementById("clearResult");
+      r.textContent = e.message;
+      r.classList.remove("hidden");
+    }
+  });
+
+// --------------------------
+// Approved
+// --------------------------
+async function refreshApproved() {
+  try {
+    const sd = document.getElementById("approvedStartDate").value || "";
+    const ed = document.getElementById("approvedEndDate").value || "";
+
+    const qs = [];
+    if (sd) qs.push(`start_date=${encodeURIComponent(sd)}`);
+    if (ed) qs.push(`end_date=${encodeURIComponent(ed)}`);
+    const url = `${API.expenses}/approved${qs.length ? "?" + qs.join("&") : ""}`;
+
+    const resp = await apiGet(url);
+    const list = resp.approved || [];
+    const tbody = document.querySelector("#approvedTable tbody");
+    tbody.innerHTML = "";
+
+    const isAdmin = ME && ME.role === "admin";
+
+    list.forEach(e => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${e.date || ""}</td>
+        <td>${e.vendor_name || ""}</td>
+        <td>${e.amount ?? ""}</td>
+        <td>${e.reference_number || ""}</td>
+        <td>${(e.expense_type || "").toUpperCase()}</td>
+        <td>${renderReceiptCell(e)}</td>
+        <td class="tdActions">
+          ${isAdmin ? `
+            <input type="file" class="hidden" id="file_appr_${e.expense_id}">
+            <button class="btn mini" data-upl="${e.expense_id}">Attach</button>
+            <button class="btn mini" data-edit="${e.expense_id}">Edit</button>
+            <button class="btn danger mini" data-del="${e.expense_id}">Delete</button>
+          ` : `<span class="inlineHint">View only</span>`}
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // --------------------------
+    // Admin-only actions
+    // --------------------------
+    if (isAdmin) {
+      // Attach receipt
+      tbody.querySelectorAll("button[data-upl]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-upl");
+          const fileInput = document.getElementById(`file_appr_${id}`);
+          if (fileInput) fileInput.click();
+        });
+      });
+
+      tbody.querySelectorAll("input[type=file]").forEach(inp => {
+        inp.addEventListener("change", async () => {
+          const id = inp.id.replace("file_appr_", "");
+          if (!inp.files || !inp.files[0]) return;
+
+          try {
+            await apiUploadReceipt(id, inp.files[0]);
+            setResult("approvedResult", "");
+            await refreshApproved();
+          } catch (e) {
+            setResult("approvedResult", e.message);
+          } finally {
+            inp.value = "";
+          }
+        });
+      });
+
+      // Edit
+      tbody.querySelectorAll("button[data-edit]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-edit");
+          try {
+            const exp = await loadExpenseForEdit(id);
+            openEditModal(id, exp);
+          } catch (e) {
+            setResult("approvedResult", e.message);
+          }
+        });
+      });
+
+      // Delete
+      tbody.querySelectorAll("button[data-del]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-del");
+          if (!confirm("Delete this expense?")) return;
+
+          try {
+            await apiDelete(`${API.expenses}/${id}`);
+            setResult("approvedResult", "");
+            await refreshApproved();
+            refreshWingsCash();
+          } catch (e) {
+            setResult("approvedResult", e.message);
+          }
+        });
+      });
+    }
+
+    setResult("approvedResult", "");
+  } catch (e) {
+    setResult("approvedResult", e.message);
+  }
+}
+
+document
+  .getElementById("btnRefreshApproved")
+  .addEventListener("click", refreshApproved);
+
+document
+  .getElementById("btnClearApprovedFilter")
+  .addEventListener("click", () => {
+    document.getElementById("approvedStartDate").value = "";
+    document.getElementById("approvedEndDate").value = "";
+    refreshApproved();
+  });
+
+// --------------------------
+// Pending
+// --------------------------
+async function refreshPending() {
+  try {
+    const resp = await apiGet(`${API.pending}/expenses`);
+    const list = resp.pending || [];
+    const tbody = document.querySelector("#pendingTable tbody");
+    tbody.innerHTML = "";
+
+    const isAdmin = ME && ME.role === "admin";
+
+    list.forEach(p => {
+      // 🔧 FIX: normalize receipts so renderReceiptCell always works
+      if (!Array.isArray(p.receipts)) {
+        p.receipts = [];
+      }
+
+      const canEdit = isAdmin || p.status === "pending";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.date || ""}</td>
+        <td>${p.vendor_name || ""}</td>
+        <td>${p.amount ?? ""}</td>
+        <td>${p.reference_number || ""}</td>
+        <td>${(p.expense_type || "").toUpperCase()}</td>
+        <td>${renderReceiptCell(p)}</td>
+        <td class="tdActions">
+          ${canEdit ? `
+            <input type="file" class="hidden" id="file_pen_${p.expense_id}">
+            <button class="btn mini" data-upl="${p.expense_id}">Attach</button>
+
+            ${isAdmin ? `
+              <button class="btn success mini" data-approve="${p.expense_id}">Approve</button>
+              <button class="btn danger mini" data-reject="${p.expense_id}">Reject</button>
+            ` : ``}
+
+            <button class="btn mini" data-edit="${p.expense_id}">Edit</button>
+            <button class="btn danger mini" data-del="${p.expense_id}">Delete</button>
+          ` : `<span class="inlineHint">Awaiting approval</span>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // ---------- Attach receipt (ADMIN + USER) ----------
+    tbody.querySelectorAll("button[data-upl]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-upl");
+        document.getElementById(`file_pen_${id}`).click();
+      });
+    });
+
+    tbody.querySelectorAll("input[type=file]").forEach(inp => {
+      inp.addEventListener("change", async () => {
+        const id = inp.id.replace("file_pen_", "");
+        if (!inp.files || !inp.files[0]) return;
+        try {
+          await apiUploadReceipt(id, inp.files[0]);
+          setResult("pendingResult", "");
+          refreshPending(); // 🔁 receipt appears immediately
+        } catch (e) {
+          setResult("pendingResult", e.message);
+        } finally {
+          inp.value = "";
+        }
+      });
+    });
+
+    // ---------- ADMIN ONLY ----------
+    if (isAdmin) {
+      tbody.querySelectorAll("button[data-approve]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-approve");
+          try {
+            await apiPost(`${API.pending}/expenses/approve`, { expense_id: id });
+            setResult("pendingResult", "");
+            refreshPending();
+            refreshApproved();
+            refreshAccrued();
+            refreshWingsCash();
+          } catch (e) {
+            setResult("pendingResult", e.message);
+          }
+        });
+      });
+
+      tbody.querySelectorAll("button[data-reject]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-reject");
+          try {
+            await apiPost(`${API.pending}/expenses/reject`, { expense_id: id });
+            setResult("pendingResult", "");
+            refreshPending();
+            refreshWingsCash();
+          } catch (e) {
+            setResult("pendingResult", e.message);
+          }
+        });
+      });
+    }
+
+    // ---------- EDIT (ADMIN + USER) ----------
+    tbody.querySelectorAll("button[data-edit]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-edit");
+        try {
+          const exp = await loadExpenseForEdit(id);
+          openEditModal(id, exp);
+        } catch (e) {
+          setResult("pendingResult", e.message);
+        }
+      });
+    });
+
+    // ---------- DELETE (ADMIN + USER) ----------
+    tbody.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-del");
+        if (!confirm("Delete this expense?")) return;
+        try {
+          await apiDelete(`${API.expenses}/${id}`);
+          setResult("pendingResult", "");
+          refreshPending();
+          refreshWingsCash();
+        } catch (e) {
+          setResult("pendingResult", e.message);
+        }
+      });
+    });
+
+    setResult("pendingResult", "");
+  } catch (e) {
+    setResult("pendingResult", e.message);
+  }
+}
+
+document.getElementById("btnRefreshPending").addEventListener("click", refreshPending);
+  // --------------------------
+  // Accrued + Clearing
+  // --------------------------
+async function refreshAccrued() {
+  try {
+    const resp = await apiGet(`${API.accrued}/expenses?include_cleared=${SHOW_CLEARED ? "true" : "false"}`);
+    const list = resp.accrued || [];
+    const tbody = document.querySelector("#accruedTable tbody");
+    tbody.innerHTML = "";
+
+    // ✅ FIX: define isAdmin
+    const isAdmin = ME && ME.role === "admin";
+
+    list.forEach(a => {
+      const bal = a.balance ?? "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${a.date || ""}</td>
+        <td>${a.vendor_name || ""}</td>
+        <td>${a.amount ?? ""}</td>
+        <td>${a.reference_number || ""}</td>
+        <td>${(a.expense_type || "").toUpperCase()}</td>
+        <td>${bal}</td>
+        <td>${renderReceiptCell(a)}</td>
+        <td class="tdActions">
+          ${isAdmin ? `
+            <button class="btn mini" data-clear="${a.expense_id}">Clear</button>
+          ` : `<span class="inlineHint">View only</span>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    if (isAdmin) {
+      tbody.querySelectorAll("button[data-clear]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-clear");
+          if (!id) return;
+          openClearModal(id);
+        });
+      });
+    }
+
+    setResult("accruedResult", "");
+  } catch (e) {
+    setResult("accruedResult", e.message);
+  }
+}
+
+document.getElementById("btnRefreshAccrued").addEventListener("click", refreshAccrued);
+document.getElementById("btnToggleCleared").addEventListener("click", () => {
+  SHOW_CLEARED = !SHOW_CLEARED;
+  document.getElementById("btnToggleCleared").textContent = `Show Cleared: ${SHOW_CLEARED ? "On" : "Off"}`;
+  refreshAccrued();
+});
+
+// --------------------------
+// Users (Admin)
+// --------------------------
+
+document.getElementById("btnRefreshUsers").addEventListener("click", refreshUsers);
+
+async function refreshUsers() {
+  try {
+    const resp = await apiGet(`${API.auth}/users`);
+    const users = resp.users || [];
+
+    const tbody = document.querySelector("#usersTable tbody");
+    tbody.innerHTML = "";
+
+    users.forEach(u => {
+      const isSelf = ME && u.user_id === ME.user_id;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${u.email}</td>
+        <td>${u.role}</td>
+        <td>${u.active ? "Yes" : "No"}</td>
+        <td class="tdActions">
+          <button class="btn mini" data-edit="${u.user_id}">Edit</button>
+          ${
+            isSelf
+              ? `<span class="inlineHint">Current user</span>`
+              : u.active
+                ? `<button class="btn danger mini" data-disable="${u.user_id}">Disable</button>`
+                : `<button class="btn success mini" data-enable="${u.user_id}">Enable</button>`
+          }
+          <button class="btn mini" data-password="${u.user_id}">
+            Set Password
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Edit user
+    tbody.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.onclick = () => openUserEdit(btn.dataset.edit);
+    });
+
+    // Disable
+    tbody.querySelectorAll("[data-disable]").forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm("Disable this user?")) return;
+        await apiPatch(`${API.auth}/users/${btn.dataset.disable}/active`, { active: false });
+        refreshUsers();
+      };
+    });
+
+    // Enable
+    tbody.querySelectorAll("[data-enable]").forEach(btn => {
+      btn.onclick = async () => {
+        await apiPatch(`${API.auth}/users/${btn.dataset.enable}/active`, { active: true });
+        refreshUsers();
+      };
+    });
+
+    // Password reset
+    tbody.querySelectorAll("[data-password]").forEach(btn => {
+      btn.onclick = async () => {
+        const pwd = prompt("Set new password (minimum 8 characters)");
+        if (!pwd || pwd.length < 8) {
+          alert("Password must be at least 8 characters");
+          return;
+        }
+        await apiPatch(`${API.auth}/users/${btn.dataset.password}/password`, { password: pwd });
+        alert("Password updated");
+      };
+    });
+
+  } catch (e) {
+    setResult("usersResult", e.message);
+  }
+}
+
+// --------------------------
+// User Edit (Admin) — HARD SAFE VERSION
+// --------------------------
+
+let EDIT_USER_ID = null;
+
+function mustGet(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    throw new Error(`Missing DOM element: #${id}`);
+  }
+  return el;
+}
+
+async function openUserEdit(userId) {
+  try {
+    const resp = await apiGet(`${API.auth}/users`);
+    const user = (resp.users || []).find(u => u.user_id === userId);
+    if (!user) throw new Error("User not found");
+
+    EDIT_USER_ID = user.user_id;
+
+    const emailEl = mustGet("userEditEmail");
+    const roleEl  = mustGet("userEditRole");
+    const cashEl  = mustGet("userEditCash");
+    const overlay = mustGet("userEditOverlay");
+
+    emailEl.value = user.email || "";
+    roleEl.value  = user.role || "user";
+    cashEl.innerHTML = "";
+
+    if (!CACHED_PAID_THROUGH.length) {
+      await refreshExpenseDropdowns();
+    }
+
+    const allowed = user.allowed_cash_accounts || [];
+
+    CACHED_PAID_THROUGH.forEach(acc => {
+      const id =
+        acc["Account ID"] ||
+        acc["Account Id"] ||
+        acc["account_id"];
+
+      if (!id) return;
+
+      const name =
+        acc["Account Name"] ||
+        acc["account_name"] ||
+        id;
+
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = name;
+      opt.selected = allowed.includes(id);
+
+      cashEl.appendChild(opt);
+    });
+
+    overlay.classList.remove("hidden");
+
+  } catch (e) {
+    console.error(e);
+    setResult("usersResult", e.message);
+  }
+}
+
+function closeUserEdit() {
+  EDIT_USER_ID = null;
+  mustGet("userEditOverlay").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  mustGet("btnUserEditClose").onclick  = closeUserEdit;
+  mustGet("btnUserEditCancel").onclick = closeUserEdit;
+
+  mustGet("btnUserEditSave").onclick = async () => {
+    try {
+      if (!EDIT_USER_ID) return;
+
+      const role = mustGet("userEditRole").value;
+      const cashSel = mustGet("userEditCash");
+
+      const allowed = Array.from(cashSel.selectedOptions).map(o => o.value);
+
+      // ---- SAVE TO BACKEND ----
+      await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/role`, { role });
+
+      await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/cash-access`, {
+        allowed_cash_accounts: allowed,
+      });
+
+      // ---- CLOSE MODAL ----
+      closeUserEdit();
+
+      // ---- REFRESH USERS TABLE ----
+      await refreshUsers();
+
+      // =====================================================
+      // 🔥 CRITICAL FIX 1 — RELOAD CURRENT USER PERMISSIONS
+      // =====================================================
+      await loadMe();
+      applyRoleUI();
+
+      // ---- REFRESH CASH DASHBOARD WITH NEW ACCOUNT ----
+      refreshWingsCash();
+
+    } catch (e) {
+      const r = mustGet("userEditResult");
+      r.textContent = e.message;
+      r.classList.remove("hidden");
+    }
+  };
+});
+
+
+// --------------------------
+// Boot
+// --------------------------
+(async function boot() {
+  // Always start in a clean logged-out visual state
+  enterLogin();
+  document.getElementById("btnLogout").style.display = "none";
+
+  await loadMe();
+  applyRoleUI();
+
+  if (ME) {
+    document.getElementById("loginState").textContent =
+      `Logged in as ${ME.email} (${ME.role})`;
+
+    // Ensure logout is visible when session is restored
+    document.getElementById("btnLogout").style.display = "inline-block";
+
+    enterApp();
+    loadAssetDropdowns();
+  } else {
+    document.getElementById("loginState").textContent = "Not logged in";
+  }
+})();
+
+</script>
+
+
+</body>
+</html>

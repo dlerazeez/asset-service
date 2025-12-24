@@ -1,0 +1,32 @@
+{
+  "7f92e59eadadada3d3975c3c": {
+    "user_id": "7f92e59eadadada3d3975c3c",
+    "email": "admin@laveen-air.com",
+    "role": "admin",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$HOpaetO7ErisM/RnCdPyBg$CSDvTv5zIOngSnNh+kIB0vdC3a19mIl0OWPJlFZkePQ",
+    "created_at": 1766471565,
+    "active": true,
+    "allowed_cash_accounts": [
+      "5571826000000000358"
+    ]
+  },
+  "d2b7c89741a1e6b2047b106a": {
+    "user_id": "d2b7c89741a1e6b2047b106a",
+    "email": "dler@laveen-air.com",
+    "role": "admin",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$eY+R0rpXCgGAcI5xLkXIeQ$LO0U87EDIw5v3Ku1MlqKERs2FRFary3zLehu6olLvFM",
+    "created_at": 1766472727,
+    "active": true
+  },
+  "7e8b066fe62628d8da327a44": {
+    "user_id": "7e8b066fe62628d8da327a44",
+    "email": "marketing@laveen-air.com",
+    "role": "user",
+    "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$1Dj0uDpe0FlBv6jSsJiXoQ$F7ob8AP1QgVz9vg0lfsvMDaQbNUzgmwlu8d1Wb5qQkw",
+    "created_at": 1766489415,
+    "active": true,
+    "allowed_cash_accounts": [
+      "5571826000000164424"
+    ]
+  }
+}
