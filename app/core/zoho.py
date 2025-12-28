@@ -88,17 +88,26 @@ class ZohoClient:
         url = f"{self.books_base_url.rstrip('/')}/{path.lstrip('/')}"
 
         async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                json=json,
-                data=data,
-                files=files,
-            )
-            r.raise_for_status()
-            return r.json()
+            try:
+                r = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    params=params,
+                    json=json,
+                    data=data,
+                    files=files,
+                )
+                r.raise_for_status()
+                return r.json()
+            except httpx.HTTPStatusError as e:
+                try:
+                    detail = e.response.json()
+                except Exception:
+                    detail = e.response.text
+                raise HTTPException(status_code=e.response.status_code, detail=detail)
+            except httpx.RequestError as e:
+                raise HTTPException(status_code=502, detail=str(e))
 
 
 zoho = ZohoClient()

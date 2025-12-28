@@ -45,10 +45,6 @@ def _today_str() -> str:
     return date.today().isoformat()
 
 
-# =========================================================
-# VENDORS
-# =========================================================
-
 @router.get("/vendors")
 async def list_vendors():
     if not settings.use_zoho:
@@ -83,33 +79,9 @@ async def create_expense(
     if exp_type == "accrued":
         acc = coa_store.accrued_paid_through_account()
         if not acc:
-            raise HTTPException(
-                status_code=400,
-                detail="Accrued Expenses account not found in COA",
-            )
-
-        paid_through_id = (
-            acc.get("Account ID")
-            or acc.get("Account Id")
-            or acc.get("account_id")
-            or ""
-        ).strip()
-
-        paid_through_name = (
-            acc.get("Account Name")
-            or acc.get("account_name")
-            or "Accrued Expenses"
-        )
-
-    # 🔐 ENFORCE CASH ACCESS (ORDINARY ONLY)
-    if not user.is_admin and exp_type != "accrued":
-        allowed = user.allowed_cash_accounts or []
-        if paid_through_id not in allowed:
-            raise HTTPException(
-                status_code=403,
-                detail="You are not allowed to use this paid-through account",
-
-            )
+            raise HTTPException(status_code=400, detail="Accrued Expenses account not found in COA")
+        paid_through_id = (acc.get("Account ID") or acc.get("Account Id") or acc.get("account_id") or "").strip()
+        paid_through_name = (acc.get("Account Name") or acc.get("account_name") or "Accrued Expenses")
 
     if not payload.expense_account_id:
         raise HTTPException(status_code=400, detail="Expense account is required")
@@ -197,36 +169,13 @@ def get_expense(
     return {"expense": exp}
 
 
-# =========================================================
-# UPDATE EXPENSE (ADMIN + USER WITH ACCESS)
-# =========================================================
-
 @router.patch("/{expense_id}")
-def update_expense(
-    expense_id: str,
-    patch: Dict[str, Any],
-    user: CurrentUser = Depends(get_current_user),
-):
-    existing = pending_store.get(expense_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    if not user.is_admin:
-        if existing.get("status") != "pending":
-            raise HTTPException(status_code=403, detail="Only pending expenses can be edited")
-        if existing.get("paid_through_account_id") not in (user.allowed_cash_accounts or []):
-            raise HTTPException(status_code=403, detail="Not allowed")
-
+def update_expense(expense_id: str, patch: Dict[str, Any], _: CurrentUser = Depends(require_admin)):
     updated = pending_store.update(expense_id, patch)
     if not updated:
-        raise HTTPException(status_code=400, detail="Update failed")
-
+        raise HTTPException(status_code=404, detail="Expense not found")
     return {"ok": True, "expense": updated}
 
-
-# =========================================================
-# DELETE EXPENSE (ADMIN ONLY)
-# =========================================================
 
 @router.delete("/{expense_id}")
 def delete_expense(

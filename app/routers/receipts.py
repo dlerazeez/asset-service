@@ -65,26 +65,40 @@ async def upload_receipt(
     if not updated:
         raise HTTPException(status_code=500, detail="Failed to attach receipt")
 
-    # If already approved & posted in Zoho, push attachment immediately
+    # If this expense was already posted/approved in Zoho, push attachment now
+    zoho_expense_id = (updated or {}).get("zoho_expense_id") or (exp or {}).get("zoho_expense_id")
+    status = (updated or {}).get("status") or (exp or {}).get("status")
+
     zoho_expense_id = (
         (updated or {}).get("zoho_expense_id")
         or (exp or {}).get("zoho_expense_id")
     )
-    status = (updated or {}).get("status") or (exp or {}).get("status")
+    zoho_journal_id = (
+        (updated or {}).get("zoho_journal_id")
+        or (exp or {}).get("zoho_journal_id")
+    )
 
-    if status == "approved" and zoho_expense_id:
+    if status == "approved" and (zoho_expense_id or zoho_journal_id):
         try:
             token = await zoho.get_access_token()
             params = {"organization_id": zoho.org_id} if zoho.org_id else {}
 
-            attach_url = (
-                f"{zoho.books_base_url.rstrip('/')}"
-                f"/expenses/{str(zoho_expense_id).strip()}/attachment"
-            )
+            attach_url = f"{zoho.books_base_url.rstrip('/')}/expenses/{str(zoho_expense_id).strip()}/attachment"
             headers = {"Authorization": f"Zoho-oauthtoken {token}"}
 
             ctype = mimetypes.guess_type(stored_name)[0] or "application/octet-stream"
             files = {"attachment": (stored_name, content, ctype)}
+
+            if zoho_expense_id:
+                attach_url = (
+                    f"{zoho.books_base_url.rstrip('/')}"
+                    f"/expenses/{str(zoho_expense_id).strip()}/attachment"
+                )
+            else:
+                attach_url = (
+                    f"{zoho.books_base_url.rstrip('/')}"
+                    f"/journals/{str(zoho_journal_id).strip()}/attachment"
+                )
 
             async with httpx.AsyncClient(timeout=60) as client:
                 r = await client.post(

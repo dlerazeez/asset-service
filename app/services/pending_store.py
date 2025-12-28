@@ -80,32 +80,6 @@ class PendingStore:
         self._data: Dict[str, Dict[str, Any]] = {}
         self._loaded = False
 
-    # ----------------------------------------------------
-    # RECEIPTS
-    # ----------------------------------------------------
-
-    def add_receipt(self, expense_id: str, *, filename: str, url: str) -> Optional[Dict[str, Any]]:
-        self._load()
-        key = str(expense_id)
-
-        with self._lock:
-            rec = self._data.get(key)
-            if not rec:
-                return None
-
-            rec.setdefault("receipts", []).append({
-                "filename": filename,
-                "url": url,
-                "created_at": int(time.time()),
-            })
-
-            self._save()
-            return rec
-
-    # ----------------------------------------------------
-    # Load / Save
-    # ----------------------------------------------------
-
     def _load(self) -> None:
         if self._loaded:
             return
@@ -120,6 +94,8 @@ class PendingStore:
                 self._data = json.load(f) or {}
         except Exception:
             self._data = {}
+
+        self._ensure_clearing_ids()
 
     def _save(self) -> None:
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
@@ -163,6 +139,9 @@ class PendingStore:
     # ----------------------------------------------------
 
     def add_pending(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create or overwrite a pending record. Used by /api/expenses/create.
+        """
         self._load()
 
         expense_id = str(record.get("expense_id") or self._next_id())
@@ -177,31 +156,44 @@ class PendingStore:
         amount = _safe_float(record.get("amount"))
         exp_type = (record.get("expense_type") or "ordinary").lower().strip()
 
+        # NEW: discriminator for Pending page grouping
+        pending_kind = (record.get("pending_kind") or "").strip().lower()
+        if pending_kind not in ("expense", "accrued_payment"):
+            # auto-derive if not provided
+            pending_kind = "accrued_payment" if exp_type == "accrued_payment" else "expense"
+
         normalized: Dict[str, Any] = {
             "expense_id": expense_id,
-            "status": "pending",
+            "status": (record.get("status") or "pending").strip().lower(),
             "created_at": int(time.time()),
-            "created_by": record.get("created_by"),
-
-            # ✅ FIX — persist owner
-            "created_by": record.get("created_by"),
 
             "date": record.get("date") or "",
             "vendor_id": record.get("vendor_id"),
             "vendor_name": vendor_name,
             "amount": amount,
             "reference_number": record.get("reference_number") or "",
+
+            # Types
             "expense_type": exp_type,
+
             "expense_account_id": record.get("expense_account_id") or "",
             "paid_through_account_id": record.get("paid_through_account_id") or "",
+            "paid_through_account_name": record.get("paid_through_account_name") or "",
+
             "description": record.get("description") or "",
             "receipts": record.get("receipts") or [],
+
+            # Zoho posting flags (set during approve)
             "zoho_posted": bool(record.get("zoho_posted", False)),
             "zoho_error": record.get("zoho_error"),
             "zoho_response": record.get("zoho_response"),
+
+            # Accrued clearing support
             "balance": _safe_float(record.get("balance")),
             "clearing": record.get("clearing") or [],
             "cleared_at": record.get("cleared_at"),
+
+            # Keep raw payload for later posting/debugging
             "payload": payload,
         }
 
@@ -214,6 +206,7 @@ class PendingStore:
 
         return normalized
 
+    # Compatibility alias used by older routers
     def create_pending(self, record: Dict[str, Any]) -> Dict[str, Any]:
         return self.add_pending(record)
 
@@ -222,7 +215,24 @@ class PendingStore:
         with self._lock:
             return self._data.get(str(expense_id))
 
-    def update_fields(self, expense_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def delete(self, expense_id: str) -> bool:
+        """
+        Hard delete (UI "Delete").
+        """
+        self._load()
+        key = str(expense_id)
+        with self._lock:
+            if key not in self._data:
+                return False
+            del self._data[key]
+            self._save()
+            return True
+
+    def update_fields(self, expense_id: str, fields: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Partial update helper used by routers (approve flow / Zoho status).
+        Must only persist JSON-serializable data.
+        """
         self._load()
         key = str(expense_id)
 
@@ -230,11 +240,19 @@ class PendingStore:
             rec = self._data.get(key)
             if not rec:
                 return None
-            rec.update(updates)
+
+            safe_fields = _json_sanitize(fields)
+            if isinstance(safe_fields, dict):
+                rec.update(safe_fields)
+
             self._save()
             return rec
 
-    def update(self, expense_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def add_receipt(self, expense_id: str, *, filename: str, url: str) -> Optional[Dict[str, Any]]:
+        """
+        Attach a receipt to an expense (pending/approved/accrued).
+        Called by /api/receipts/upload/{expense_id}.
+        """
         self._load()
         key = str(expense_id)
 
@@ -242,7 +260,14 @@ class PendingStore:
             rec = self._data.get(key)
             if not rec or rec.get("status") != "pending":
                 return None
-            rec.update(updates)
+
+            rec.setdefault("receipts", [])
+            rec["receipts"].append({
+                "filename": filename,
+                "url": url,
+                "created_at": int(time.time()),
+            })
+
             self._save()
             return rec
 
@@ -279,20 +304,16 @@ class PendingStore:
         out: List[Dict[str, Any]] = []
 
         with self._lock:
-            for rec in self._data.values():
-                if rec.get("status") != "approved":
-                    continue
+            items = [x for x in self._data.values() if x.get("status") == "approved"]
 
-                d = _parse_yyyy_mm_dd(rec.get("date"))
-                if sd and (not d or d < sd):
-                    continue
-                if ed and (not d or d >= ed):
-                    continue
+        # If no filter requested at all, return all approved
+        if not sd_d and not ed_d:
+            items.sort(key=lambda x: x.get("approved_at", 0), reverse=True)
+            return items
 
-                out.append(rec)
-
-        out.sort(key=lambda x: x.get("approved_at", 0), reverse=True)
-        return out
+        filtered = [x for x in items if in_range(x.get("date") or "")]
+        filtered.sort(key=lambda x: x.get("approved_at", 0), reverse=True)
+        return filtered
 
     def list_accrued(self, *, include_cleared: bool = False) -> List[Dict[str, Any]]:
         self._load()
@@ -300,8 +321,7 @@ class PendingStore:
         with self._lock:
             items = [
                 x for x in self._data.values()
-                if x.get("status") == "approved"
-                and (x.get("expense_type") or "").lower() == "accrued"
+                if x.get("status") == "approved" and (x.get("expense_type") or "").lower() == "accrued"
             ]
 
         out: List[Dict[str, Any]] = []
@@ -321,19 +341,7 @@ class PendingStore:
         out.sort(key=lambda x: x.get("approved_at", 0), reverse=True)
         return out
 
-    def list_pending(self) -> List[Dict[str, Any]]:
-        self._load()
-        with self._lock:
-            out = [x for x in self._data.values() if x.get("status") == "pending"]
-        out.sort(key=lambda x: x.get("created_at", 0), reverse=True)
-        return out
-
-    def list_all(self) -> List[Dict[str, Any]]:
-        self._load()
-        with self._lock:
-            return list(self._data.values())
-
-    # ----------------------------------------------------
+    # ---------------------------
     # State transitions
     # ----------------------------------------------------
 
@@ -373,8 +381,7 @@ class PendingStore:
 
     # ----------------------------------------------------
     # Accrued clearing
-    # ----------------------------------------------------
-
+    # ---------------------------
     def clear_accrued(
         self,
         expense_id: str,
@@ -383,6 +390,9 @@ class PendingStore:
         paid_through_account_id: str,
         paid_through_account_name: Optional[str] = None,
         clearing_date: Optional[str] = None,
+        reference_number: Optional[str] = None,
+        source_payment_id: Optional[str] = None,
+        receipts: Optional[list] = None,
     ) -> Optional[Dict[str, Any]]:
         self._load()
         key = str(expense_id)
@@ -402,26 +412,68 @@ class PendingStore:
 
             bal = _safe_float(rec.get("balance"))
             if bal is None:
-                bal = _safe_float(rec.get("amount")) or 0.0
+                orig = _safe_float(rec.get("amount")) or 0.0
+                bal = float(orig)
 
-            new_bal = max(0.0, float(bal) - float(amt))
+            new_bal = float(bal) - float(amt)
+            if new_bal < 0:
+                new_bal = 0.0
+
             rec["balance"] = new_bal
-
-            rec.setdefault("clearing", []).append({
+            rec.setdefault("clearing", [])
+            rec["clearing"].append({
                 "amount": float(amt),
                 "paid_through_account_id": paid_through_account_id,
                 "paid_through_account_name": paid_through_account_name or "",
                 "date": clearing_date or "",
+                "reference_number": reference_number or "",
+                "source_payment_id": source_payment_id or "",
+                "receipts": receipts or [],
                 "created_at": int(time.time()),
-            })
+            }
+            clearing.append(new_entry)
+            rec["clearing"] = clearing
 
-            if new_bal <= 0:
-                rec["cleared_at"] = int(time.time())
+            total_cleared = sum((_safe_float(c.get("amount")) or 0.0) for c in clearing)
+            orig_amt = _safe_float(rec.get("amount")) or 0.0
+            rec["balance"] = max(0.0, round(orig_amt - total_cleared, 2))
+
+            if rec["balance"] <= 0:
+                rec["cleared_at"] = rec.get("cleared_at") or int(time.time())
+            else:
+                rec["cleared_at"] = None
 
             self._save()
             return rec
 
+    # Compatibility alias expected by routers (e.g., app/routers/accrued.py)
+    def add_clearing(
+        self,
+        expense_id: str,
+        *,
+        amount: float,
+        paid_through_account_id: str,
+        paid_through_account_name: Optional[str] = None,
+        date: Optional[str] = None,
+        clearing_date: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        return self.clear_accrued(
+            expense_id,
+            amount=amount,
+            paid_through_account_id=paid_through_account_id,
+            paid_through_account_name=paid_through_account_name,
+            clearing_date=(date or clearing_date),
+        )
 
-pending_store = PendingStore(
-    path=os.path.join(os.path.dirname(__file__), "pending_expenses.json")
-)
+    def vendor_names(self) -> List[str]:
+        self._load()
+        names = set()
+        with self._lock:
+            for v in self._data.values():
+                vn = v.get("vendor_name")
+                if vn:
+                    names.add(str(vn))
+        return sorted(names)
+
+
+pending_store = PendingStore(path=os.path.join(os.path.dirname(__file__), "pending_expenses.json"))
