@@ -138,16 +138,16 @@
 
   <!-- Main content -->
   <main class="main">
-<div class="topbar">
-  <div>
-    <div class="topbarTitle" id="pageTitle">Assets</div>
-    <div class="topbarHint" id="pageHint">Create / Retrieve assets</div>
-  </div>
+    <div class="topbar">
+      <div>
+        <div class="topbarTitle" id="pageTitle">Assets</div>
+        <div class="topbarHint" id="pageHint">Create / Retrieve assets</div>
+      </div>
 
-  <button class="btn" id="btnLogout" type="button" style="display:none;">
-    Logout
-  </button>
-</div>
+      <button class="btn" id="btnLogout" type="button" style="display:none;">
+        Logout
+      </button>
+    </div>
 
     <!-- LOGIN PANEL -->
     <section id="panelLogin" class="panel">
@@ -481,12 +481,13 @@
     <!-- EXPENSES: PENDING -->
     <section id="panelExpensesPending" class="panel hidden">
       <div class="card">
-        <div class="cardTitle">Pending Expenses</div>
+        <div class="cardTitle">Pending</div>
         <div class="actions">
           <button class="btn primary" id="btnRefreshPending" type="button">Refresh</button>
         </div>
 
-        <div class="tableWrap">
+        <!-- ONE TABLE, TWO HEADERS (rendered inside tbody) -->
+        <div class="tableWrap" style="margin-top:10px;">
           <table class="table" id="pendingTable">
             <thead>
               <tr>
@@ -536,6 +537,34 @@
 
         <pre class="result" id="accruedResult"></pre>
       </div>
+
+      <!-- PAYMENTS MADE (VISIBLE BELOW ACCRUED) -->
+      <div class="card" style="margin-top:12px;">
+        <div class="cardTitle">Payments Made</div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnRefreshPaymentsMade" type="button">Refresh</button>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="paymentsMadeTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Paid Through</th>
+                <th>Amount</th>
+                <th>Clearing For</th>
+                <th>Reference</th>
+                <th style="width:160px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <pre class="result" id="paymentsMadeResult"></pre>
+      </div>
+
     </section>
 
     <!-- USERS -->
@@ -630,7 +659,8 @@
           <input id="editRef" type="text" placeholder="Optional" />
         </div>
 
-        <div class="field">
+        <!-- WRAPPED so it can be hidden for pending payments made -->
+        <div class="field" id="editExpenseAccountWrap">
           <label>Expense Account</label>
           <select id="editExpenseAccount"></select>
         </div>
@@ -674,17 +704,17 @@
       <button class="btn" id="btnClearClose" type="button">Close</button>
     </div>
 
+    <!-- UPDATED: Paid Through dropdown + Reference + Attachment (direct file input) -->
     <div class="modalBody">
       <div class="grid2">
         <div class="field">
-          <label>Paid Through Name</label>
-          <input id="clearPaidName" type="text" placeholder="e.g. Petty Cash / Bank" />
+          <label>Paid Through</label>
+          <select id="clearPaidThroughSelect"></select>
         </div>
 
         <div class="field">
-          <label>Paid Through Account ID (auto)</label>
-          <input id="clearPaidId" type="text" placeholder="Auto" readonly />
-          <div class="inlineHint">This is auto-selected (Petty Cash).</div>
+          <label>Reference # (required)</label>
+          <input id="clearReference" class="form-control" placeholder="Reference number" />
         </div>
 
         <div class="field">
@@ -695,6 +725,11 @@
         <div class="field">
           <label>Date (optional)</label>
           <input id="clearDate" type="date" />
+        </div>
+
+        <div class="field span2">
+          <label>Attachment (optional)</label>
+          <input id="clearAttachment" type="file" class="form-control" accept="image/*,application/pdf" />
         </div>
       </div>
 
@@ -707,6 +742,56 @@
     </div>
   </div>
 </div>
+
+<!-- PAYMENT MADE (CLEARING) MODAL -->
+<div id="clearingOverlay" class="modalOverlay hidden">
+  <div class="modalCard">
+    <div class="modalTop">
+      <div class="modalTitleWrap">
+        <div class="modalTitle">Payment Made</div>
+        <div class="modalSub" id="clearingSub"></div>
+      </div>
+      <button class="btn" id="btnClearingClose" type="button">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid2">
+        <div class="field">
+          <label>Date</label>
+          <input id="clearingDate" type="date">
+        </div>
+
+        <div class="field">
+          <label>Amount</label>
+          <input id="clearingAmount" type="number" step="0.01">
+        </div>
+
+        <div class="field">
+          <label>Paid Through</label>
+          <select id="clearingPaidThrough"></select>
+        </div>
+
+        <div class="field">
+          <label>Reference</label>
+          <input id="clearingRef" type="text">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px;">
+        <label>Attachments</label>
+        <div id="clearingReceipts" class="inlineHint"></div>
+      </div>
+
+      <pre class="result hidden" id="clearingResult"></pre>
+    </div>
+
+    <div class="modalFooter">
+      <button id="btnClearingSave" class="btn primary" type="button">Save</button>
+      <button id="btnClearingDelete" class="btn danger" type="button">Delete</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- USER EDIT MODAL (ADMIN) -->
 <div id="userEditOverlay" class="modalOverlay hidden">
@@ -755,8 +840,6 @@
   </div>
 </div>
 
-
-
 <script>
   const API = {
     assets: "/api/assets",
@@ -769,6 +852,7 @@
     accrued: "/api/accrued",
     cash: "/api/cash",
   };
+
 async function refreshWingsCash() {
   try {
     if (!ME) {
@@ -817,16 +901,10 @@ async function refreshWingsCash() {
   }
 }
 
-
-
-
 // backward compatibility – do not remove
 async function refreshWingsCashHome() {
   return refreshWingsCash();
 }
-
-
-
 
   let AUTH_TOKEN = localStorage.getItem("auth_token") || "";
   let ME = null;
@@ -846,6 +924,7 @@ async function refreshWingsCashHome() {
 
   // Edit modal state
   let EDIT_EXPENSE_ID = null;
+  let EDIT_PENDING_KIND = "expense";
 
   // Clear modal state
   let CLEAR_EXPENSE_ID = null;
@@ -949,7 +1028,6 @@ async function refreshWingsCashHome() {
   function extractExpenseId(resp) {
     if (!resp || typeof resp !== "object") return null;
 
-    // common direct shapes
     if (resp.expense_id) return resp.expense_id;
     if (resp.id) return resp.id;
 
@@ -968,7 +1046,6 @@ async function refreshWingsCashHome() {
       if (resp.data.expense && resp.data.expense.expense_id) return resp.data.expense.expense_id;
     }
 
-    // last resort: shallow scan
     for (const k of Object.keys(resp)) {
       const v = resp[k];
       if (v && typeof v === "object") {
@@ -980,154 +1057,148 @@ async function refreshWingsCashHome() {
     return null;
   }
 
-
-// --------------------------
-// Auth
-// --------------------------
-
-async function loadMe() {
-  if (!AUTH_TOKEN) return null;
-  try {
-    const me = await apiGet(`${API.auth}/me`);
-    ME = me;
-    return me;
-  } catch (e) {
-    AUTH_TOKEN = "";
-    localStorage.removeItem("auth_token");
-    ME = null;
-    return null;
-  }
-}
-
-function applyRoleUI() {
-  const isAdmin = ME && ME.role === "admin";
-  document.getElementById("navUsers").classList.toggle("hidden", !isAdmin);
-}
-
-function enterApp() {
-  document.getElementById("panelLogin").classList.add("hidden");
-  document.getElementById("btnLogout").style.display = "inline-block";
-  showPanel("panelHome", "Home", "Choose a company module");
-  refreshExpenseDropdowns();
-  refreshWingsCash();
-}
-
-function enterLogin() {
-  document.getElementById("btnLogout").style.display = "none";
-  showPanel("panelLogin", "Login", "Sign in to continue");
-}
-
-/* ---------- LOGIN ---------- */
-document.getElementById("btnLogin").addEventListener("click", async () => {
-  try {
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
-
-    if (!email || !password) {
-      setResult("authResult", "Email and password required");
-      return;
-    }
-
-    const resp = await apiPost(`${API.auth}/login`, { email, password });
-    if (!resp.token) throw new Error("Login failed: no token returned");
-
-    AUTH_TOKEN = resp.token;
-    localStorage.setItem("auth_token", AUTH_TOKEN);
-
-    const me = await loadMe();
-    if (!me) throw new Error("Login failed: could not load user");
-
-    applyRoleUI();
-
-    document.getElementById("loginState").textContent =
-      `Logged in as ${me.email} (${me.role})`;
-
-    setResult("authResult", "");
-    enterApp();
-  } catch (e) {
-    console.error("LOGIN ERROR:", e);
-    setResult("authResult", e.message);
-  }
-});
-
-/* ===========================
-   USER CASH ACCESS HELPERS
-   =========================== */
-
-function userAllowedPaidThroughIds() {
-  if (!ME) return [];
-
-  // Admins see everything
-  if (ME.role === "admin") {
-    return null;
-  }
-
-  // Normal users: enforce allowed cash accounts
-  if (Array.isArray(ME.allowed_cash_accounts)) {
-    return ME.allowed_cash_accounts.map(String);
-  }
-
-  return [];
-}
-
-/* ---------- LOGOUT ---------- */
-// (your logout handler stays here)
-
-
-document.getElementById("btnLogout").addEventListener("click", () => {
-  AUTH_TOKEN = "";
-  ME = null;
-
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("active_company");
-
-  document.getElementById("loginState").textContent = "Logged out";
-  enterLogin();
-});
-
-
-/* ---------- ACCEPT INVITE ---------- */
-document.getElementById("btnAcceptInvite").addEventListener("click", async () => {
-  try {
-    const invite_token = document.getElementById("inviteToken").value.trim();
-    const password = document.getElementById("invitePassword").value;
-    const resp = await apiPost(`${API.auth}/accept`, { invite_token, password });
-    document.getElementById("inviteState").textContent =
-      "Invite accepted. You can now log in.";
-    setResult("authResult", resp);
-  } catch (e) {
-    setResult("authResult", e.message);
-  }
-});
-/* ---------- ADMIN INVITE USER ---------- */
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("btnInviteUser");
-  if (!btn) return;
-
-  btn.addEventListener("click", async () => {
+  // --------------------------
+  // Auth
+  // --------------------------
+  async function loadMe() {
+    if (!AUTH_TOKEN) return null;
     try {
-      const emailEl = document.getElementById("inviteEmailAdmin");
-      const roleEl = document.getElementById("inviteRoleAdmin");
-      const outEl = document.getElementById("inviteTokenOut");
-
-      const email = emailEl.value.trim();
-      const role = roleEl.value;
-
-      if (!email) throw new Error("Email is required");
-
-      const resp = await apiPost(`${API.auth}/invite`, {
-        email,
-        role,
-        allowed_cash_accounts: [],
-      });
-
-      outEl.textContent = `Invite token: ${resp.invite_token}`;
-      emailEl.value = "";
+      const me = await apiGet(`${API.auth}/me`);
+      ME = me;
+      return me;
     } catch (e) {
-      setResult("usersResult", e.message);
+      AUTH_TOKEN = "";
+      localStorage.removeItem("auth_token");
+      ME = null;
+      return null;
+    }
+  }
+
+  function applyRoleUI() {
+    const isAdmin = ME && ME.role === "admin";
+    document.getElementById("navUsers").classList.toggle("hidden", !isAdmin);
+  }
+
+  function enterApp() {
+    document.getElementById("panelLogin").classList.add("hidden");
+    document.getElementById("btnLogout").style.display = "inline-block";
+    showPanel("panelHome", "Home", "Choose a company module");
+    refreshExpenseDropdowns();
+    refreshWingsCash();
+  }
+
+  function enterLogin() {
+    document.getElementById("btnLogout").style.display = "none";
+    showPanel("panelLogin", "Login", "Sign in to continue");
+  }
+
+  /* ---------- LOGIN ---------- */
+  document.getElementById("btnLogin").addEventListener("click", async () => {
+    try {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      if (!email || !password) {
+        setResult("authResult", "Email and password required");
+        return;
+      }
+
+      const resp = await apiPost(`${API.auth}/login`, { email, password });
+      if (!resp.token) throw new Error("Login failed: no token returned");
+
+      AUTH_TOKEN = resp.token;
+      localStorage.setItem("auth_token", AUTH_TOKEN);
+
+      const me = await loadMe();
+      if (!me) throw new Error("Login failed: could not load user");
+
+      applyRoleUI();
+
+      document.getElementById("loginState").textContent =
+        `Logged in as ${me.email} (${me.role})`;
+
+      setResult("authResult", "");
+      enterApp();
+    } catch (e) {
+      console.error("LOGIN ERROR:", e);
+      setResult("authResult", e.message);
     }
   });
-});
+
+  /* ===========================
+     USER CASH ACCESS HELPERS
+     =========================== */
+  function userAllowedPaidThroughIds() {
+    if (!ME) return [];
+
+    // Admins see everything
+    if (ME.role === "admin") {
+      return null;
+    }
+
+    // Normal users: enforce allowed cash accounts
+    if (Array.isArray(ME.allowed_cash_accounts)) {
+      return ME.allowed_cash_accounts.map(String);
+    }
+
+    return [];
+  }
+
+  /* ---------- LOGOUT ---------- */
+  document.getElementById("btnLogout").addEventListener("click", () => {
+    AUTH_TOKEN = "";
+    ME = null;
+
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("active_company");
+
+    document.getElementById("loginState").textContent = "Logged out";
+    enterLogin();
+  });
+
+  /* ---------- ACCEPT INVITE ---------- */
+  document.getElementById("btnAcceptInvite").addEventListener("click", async () => {
+    try {
+      const invite_token = document.getElementById("inviteToken").value.trim();
+      const password = document.getElementById("invitePassword").value;
+      const resp = await apiPost(`${API.auth}/accept`, { invite_token, password });
+      document.getElementById("inviteState").textContent =
+        "Invite accepted. You can now log in.";
+      setResult("authResult", resp);
+    } catch (e) {
+      setResult("authResult", e.message);
+    }
+  });
+
+  /* ---------- ADMIN INVITE USER ---------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("btnInviteUser");
+    if (!btn) return;
+
+    btn.addEventListener("click", async () => {
+      try {
+        const emailEl = document.getElementById("inviteEmailAdmin");
+        const roleEl = document.getElementById("inviteRoleAdmin");
+        const outEl = document.getElementById("inviteTokenOut");
+
+        const email = emailEl.value.trim();
+        const role = roleEl.value;
+
+        if (!email) throw new Error("Email is required");
+
+        const resp = await apiPost(`${API.auth}/invite`, {
+          email,
+          role,
+          allowed_cash_accounts: [],
+        });
+
+        outEl.textContent = `Invite token: ${resp.invite_token}`;
+        emailEl.value = "";
+      } catch (e) {
+        setResult("usersResult", e.message);
+      }
+    });
+  });
 
   // --------------------------
   // Sidebar navigation
@@ -1157,13 +1228,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("navExpensesPending").addEventListener("click", () => {
-    showPanel("panelExpensesPending", "Expenses", "Pending expenses");
+    showPanel("panelExpensesPending", "Expenses", "Pending expenses + payments made");
     refreshPending();
   });
 
   document.getElementById("navExpensesAccrued").addEventListener("click", () => {
     showPanel("panelExpensesAccrued", "Expenses", "Accrued expenses + clearing");
     refreshAccrued();
+    refreshPaymentsMade();
   });
 
   document.getElementById("navUsers").addEventListener("click", () => {
@@ -1198,12 +1270,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnHomeIraqi").addEventListener("click", () => comingSoon("Iraqi Airways"));
 
   // --------------------------
-  // Wings cash (requires backend endpoint GET /api/cash/wings)
-  // Response expected:
-  // {
-  //   petty_cash_account_id, petty_cash_account_name,
-  //   zoho_cash_after, pending_total, cash_before_approved
-  // }
+  // Wings cash
   // --------------------------
   function fmtMoney(v) {
     if (v === null || v === undefined || v === "") return "—";
@@ -1212,283 +1279,232 @@ document.addEventListener("DOMContentLoaded", () => {
     return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-async function renderCashDashboard() {
-  const container = document.getElementById("cashDashboard");
-  container.innerHTML = "";
+  async function renderCashDashboard() {
+    const container = document.getElementById("cashDashboard");
+    container.innerHTML = "";
 
-  const resp = await apiGet("/api/cash");
-  const cashboxes = resp.cashboxes || [];
+    const resp = await apiGet("/api/cash");
+    const cashboxes = resp.cashboxes || [];
 
-  if (cashboxes.length === 0) {
-    container.innerHTML = "<p>No cash account assigned. Contact admin.</p>";
-    return;
+    if (cashboxes.length === 0) {
+      container.innerHTML = "<p>No cash account assigned. Contact admin.</p>";
+      return;
+    }
+
+    cashboxes.forEach(cb => {
+      const card = document.createElement("div");
+      card.className = "cash-card";
+
+      card.innerHTML = `
+        <h3>${cb.account_name}</h3>
+        <p>Cash after approval: ${fmtMoney(cb.zoho_cash_after_approved)}</p>
+        <p>Pending: ${fmtMoney(cb.pending_not_approved_total)}</p>
+        <p><strong>Cash before approval:</strong> ${fmtMoney(cb.cash_before_approval)}</p>
+      `;
+
+      container.appendChild(card);
+    });
   }
-
-  cashboxes.forEach(cb => {
-    const card = document.createElement("div");
-    card.className = "cash-card";
-
-    card.innerHTML = `
-      <h3>${cb.account_name}</h3>
-      <p>Cash after approval: ${fmtMoney(cb.zoho_cash_after_approved)}</p>
-      <p>Pending: ${fmtMoney(cb.pending_not_approved_total)}</p>
-      <p><strong>Cash before approval:</strong> ${fmtMoney(cb.cash_before_approval)}</p>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-
-
 
   document.getElementById("btnRefreshWingsCash").addEventListener("click", refreshWingsCash);
 
   // --------------------------
-  // Assets (unchanged behavior)
+  // Assets
   // --------------------------
-/* ===========================
-   ASSET DROPDOWNS
-   =========================== */
-async function loadAssetDropdowns() {
-  try {
-    const [types, branches, locations] = await Promise.all([
-      apiGet(`${API.assets}/types`),
-      apiGet(`${API.assets}/branches`),
-      apiGet(`${API.assets}/locations`),
-    ]);
+  async function loadAssetDropdowns() {
+    try {
+      const [types, branches, locations] = await Promise.all([
+        apiGet(`${API.assets}/types`),
+        apiGet(`${API.assets}/branches`),
+        apiGet(`${API.assets}/locations`),
+      ]);
 
-    const typeSel = document.getElementById("assetType");
-    typeSel.innerHTML = "";
-    (types.fixed_asset_types || []).forEach(t => {
-      const opt = document.createElement("option");
-      opt.value = t.fixed_asset_type_id;
-      opt.textContent = t.fixed_asset_type_name;
-      typeSel.appendChild(opt);
-    });
+      const typeSel = document.getElementById("assetType");
+      typeSel.innerHTML = "";
+      (types.fixed_asset_types || []).forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.fixed_asset_type_id;
+        opt.textContent = t.fixed_asset_type_name;
+        typeSel.appendChild(opt);
+      });
 
-    const branchSel = document.getElementById("assetBranch");
-    branchSel.innerHTML = "<option value=''>None</option>";
-    (branches.branches || []).forEach(b => {
-      const opt = document.createElement("option");
-      opt.value = b.branch_id;
-      opt.textContent = b.branch_name;
-      branchSel.appendChild(opt);
-    });
+      const branchSel = document.getElementById("assetBranch");
+      branchSel.innerHTML = "<option value=''>None</option>";
+      (branches.branches || []).forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.branch_id;
+        opt.textContent = b.branch_name;
+        branchSel.appendChild(opt);
+      });
 
-    const locSel = document.getElementById("assetLocation");
-    locSel.innerHTML = "<option value=''>None</option>";
-    (locations.locations || []).forEach(l => {
-      const opt = document.createElement("option");
-      opt.value = l.location_id;
-      opt.textContent = l.location_name;
-      locSel.appendChild(opt);
-    });
-  } catch (e) {
-    setResult("assetCreateResult", `Error loading dropdowns: ${e.message}`);
+      const locSel = document.getElementById("assetLocation");
+      locSel.innerHTML = "<option value=''>None</option>";
+      (locations.locations || []).forEach(l => {
+        const opt = document.createElement("option");
+        opt.value = l.location_id;
+        opt.textContent = l.location_name;
+        locSel.appendChild(opt);
+      });
+    } catch (e) {
+      setResult("assetCreateResult", `Error loading dropdowns: ${e.message}`);
+    }
   }
-}
 
-/* ===========================
-   ASSET LIST (SAFE)
-   =========================== */
-async function refreshAssets() {
-  try {
-    const resp = await apiGet(`${API.assets}/retrieve`);
-    const list = resp.fixed_assets || [];
+  async function refreshAssets() {
+    try {
+      const resp = await apiGet(`${API.assets}/retrieve`);
+      const list = resp.fixed_assets || [];
 
-    const tbody = document.querySelector("#assetsTable tbody");
-    tbody.innerHTML = "";
+      const tbody = document.querySelector("#assetsTable tbody");
+      tbody.innerHTML = "";
 
-    list.forEach(a => {
-      const tr = document.createElement("tr");
+      list.forEach(a => {
+        const tr = document.createElement("tr");
 
-      tr.innerHTML = `
-        <td>${a.asset_name || ""}</td>
-        <td>${a.asset_number || ""}</td>
-        <td>${a.status || ""}</td>
-        <td>${a.fixed_asset_type_name || ""}</td>
-        <td>${a.branch_name || ""}</td>
-        <td>${a.location_name || ""}</td>
-        <td>${a.current_quantity ?? ""}</td>
-        <td>${a.total_life ? `${a.total_life} ${a.total_life_basis || ""}` : ""}</td>
-        <td>${a.depreciation_method || ""}</td>
-        <td class="tdActions">
-          <button class="btn mini" disabled>Edit</button>
-        </td>
-      `;
+        tr.innerHTML = `
+          <td>${a.asset_name || ""}</td>
+          <td>${a.asset_number || ""}</td>
+          <td>${a.status || ""}</td>
+          <td>${a.fixed_asset_type_name || ""}</td>
+          <td>${a.branch_name || ""}</td>
+          <td>${a.location_name || ""}</td>
+          <td>${a.current_quantity ?? ""}</td>
+          <td>${a.total_life ? `${a.total_life} ${a.total_life_basis || ""}` : ""}</td>
+          <td>${a.depreciation_method || ""}</td>
+          <td class="tdActions">
+            <button class="btn mini" disabled>Edit</button>
+          </td>
+        `;
 
-      tbody.appendChild(tr);
-    });
+        tbody.appendChild(tr);
+      });
 
-    setResult("assetsRetrieveResult", resp);
-  } catch (e) {
-    setResult("assetsRetrieveResult", e.message);
+      setResult("assetsRetrieveResult", resp);
+    } catch (e) {
+      setResult("assetsRetrieveResult", e.message);
+    }
   }
-}
 
-/* ===========================
-   ASSET ACTIONS
-   =========================== */
-document.getElementById("btnCreateAsset").addEventListener("click", async () => {
-  try {
-    const payload = {
-      asset_name: document.getElementById("assetName").value.trim(),
-      fixed_asset_type_id: document.getElementById("assetType").value,
-      branch_id: document.getElementById("assetBranch").value || null,
-      location_id: document.getElementById("assetLocation").value || null,
-      purchase_quantity: parseFloat(document.getElementById("purchaseQty").value || "1"),
-      total_life: document.getElementById("totalLife").value
-        ? parseInt(document.getElementById("totalLife").value, 10)
-        : null,
-      total_life_basis: document.getElementById("totalLifeBasis").value,
-      depreciation_method: document.getElementById("depreciationMethod").value,
-      description: document.getElementById("assetDescription").value || "",
-    };
+  document.getElementById("btnCreateAsset").addEventListener("click", async () => {
+    try {
+      const payload = {
+        asset_name: document.getElementById("assetName").value.trim(),
+        fixed_asset_type_id: document.getElementById("assetType").value,
+        branch_id: document.getElementById("assetBranch").value || null,
+        location_id: document.getElementById("assetLocation").value || null,
+        purchase_quantity: parseFloat(document.getElementById("purchaseQty").value || "1"),
+        total_life: document.getElementById("totalLife").value
+          ? parseInt(document.getElementById("totalLife").value, 10)
+          : null,
+        total_life_basis: document.getElementById("totalLifeBasis").value,
+        depreciation_method: document.getElementById("depreciationMethod").value,
+        description: document.getElementById("assetDescription").value || "",
+      };
 
-    if (!payload.asset_name) throw new Error("Asset name is required");
-    if (!payload.fixed_asset_type_id) throw new Error("Fixed asset type is required");
+      if (!payload.asset_name) throw new Error("Asset name is required");
+      if (!payload.fixed_asset_type_id) throw new Error("Fixed asset type is required");
 
-    const resp = await apiPost(`${API.assets}/create`, payload);
-    setResult("assetCreateResult", resp);
-    refreshAssets();
-  } catch (e) {
-    setResult("assetCreateResult", e.message);
-  }
-});
+      const resp = await apiPost(`${API.assets}/create`, payload);
+      setResult("assetCreateResult", resp);
+      refreshAssets();
+    } catch (e) {
+      setResult("assetCreateResult", e.message);
+    }
+  });
 
-document.getElementById("btnResetAsset").addEventListener("click", () => {
-  document.getElementById("assetName").value = "";
-  document.getElementById("purchaseQty").value = "1";
-  document.getElementById("totalLife").value = "";
-  document.getElementById("assetDescription").value = "";
-  setResult("assetCreateResult", "");
-});
+  document.getElementById("btnResetAsset").addEventListener("click", () => {
+    document.getElementById("assetName").value = "";
+    document.getElementById("purchaseQty").value = "1";
+    document.getElementById("totalLife").value = "";
+    document.getElementById("assetDescription").value = "";
+    setResult("assetCreateResult", "");
+  });
 
-document.getElementById("btnRefreshAssets").addEventListener("click", refreshAssets);
+  document.getElementById("btnRefreshAssets").addEventListener("click", refreshAssets);
 
-// THEN functions that use it
+  // --------------------------
+  // Expense dropdowns
+  // --------------------------
+  async function refreshExpenseDropdowns() {
+    try {
+      const [expenseAccounts, paidThrough, vendors, accrued] = await Promise.all([
+        apiGet(`${API.coa}/expense_accounts`),
+        apiGet(`${API.coa}/paid_through`),
+        apiGet(`${API.expenses}/vendors`),
+        apiGet(`${API.coa}/accrued_paid_through`),
+      ]);
 
-async function refreshExpenseDropdowns() {
-  try {
-    const [expenseAccounts, paidThrough, vendors, accrued] = await Promise.all([
-      apiGet(`${API.coa}/expense_accounts`),
-      apiGet(`${API.coa}/paid_through`),
-      apiGet(`${API.expenses}/vendors`),
-      apiGet(`${API.coa}/accrued_paid_through`),
-    ]);
+      ACCRUED_ACCOUNT = accrued.account || null;
+      CACHED_EXPENSE_ACCOUNTS = expenseAccounts.accounts || [];
+      CACHED_PAID_THROUGH = paidThrough.accounts || [];
+      CACHED_VENDORS = vendors.contacts || [];
 
-    // Cache data globally
-    ACCRUED_ACCOUNT = accrued.account || null;
-    CACHED_EXPENSE_ACCOUNTS = expenseAccounts.accounts || [];
-    CACHED_PAID_THROUGH = paidThrough.accounts || [];
-    CACHED_VENDORS = vendors.contacts || [];
+      detectWingsPettyCashFromPaidThrough();
 
-    // Auto-detect Wings petty cash
-    detectWingsPettyCashFromPaidThrough();
+      const expSel = document.getElementById("expenseAccount");
+      expSel.innerHTML = "<option value=''>Select expense account</option>";
 
-    /* ============================
-       EXPENSE ACCOUNT DROPDOWN
-       ============================ */
-    const expSel = document.getElementById("expenseAccount");
-    expSel.innerHTML = "<option value=''>Select expense account</option>";
+      CACHED_EXPENSE_ACCOUNTS.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a["Account ID"] || a["Account Id"] || a["account_id"] || "";
+        opt.textContent = a["Account Name"] || a["account_name"] || "";
+        expSel.appendChild(opt);
+      });
 
-    CACHED_EXPENSE_ACCOUNTS.forEach(a => {
-      const opt = document.createElement("option");
-      opt.value =
-        a["Account ID"] ||
-        a["Account Id"] ||
-        a["account_id"] ||
-        "";
+      expSel.value = "";
 
-      opt.textContent =
-        a["Account Name"] ||
-        a["account_name"] ||
-        "";
+      const paidSel = document.getElementById("paidThrough");
+      paidSel.innerHTML = "<option value=''>Select paid through</option>";
 
-      expSel.appendChild(opt);
-    });
+      const allowedIds = userAllowedPaidThroughIds();
 
-    expSel.value = "";
+      CACHED_PAID_THROUGH.forEach(a => {
+        const id = a["Account ID"] || a["Account Id"] || a["account_id"] || "";
+        const name = a["Account Name"] || a["account_name"] || "";
+        if (allowedIds && !allowedIds.includes(String(id))) return;
 
-    /* ============================
-       PAID THROUGH DROPDOWN (SECURED)
-       ============================ */
-    const paidSel = document.getElementById("paidThrough");
-    paidSel.innerHTML = "<option value=''>Select paid through</option>";
+        const opt = document.createElement("option");
+        opt.value = String(id);
+        opt.textContent = String(name);
+        paidSel.appendChild(opt);
+      });
 
-    const allowedIds = userAllowedPaidThroughIds(); // 🔐 enforce user access
+      paidSel.value = "";
 
-    CACHED_PAID_THROUGH.forEach(a => {
-      const id =
-        a["Account ID"] ||
-        a["Account Id"] ||
-        a["account_id"] ||
-        "";
+      const venSel = document.getElementById("expenseVendorSelect");
+      venSel.innerHTML = "<option value=''>Select vendor</option>";
 
-      const name =
-        a["Account Name"] ||
-        a["account_name"] ||
-        "";
+      CACHED_VENDORS.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.contact_id;
+        opt.textContent = v.contact_name;
+        venSel.appendChild(opt);
+      });
 
-      // Non-admin users only see allowed accounts
-      if (allowedIds && !allowedIds.includes(id)) return;
+      venSel.value = "";
 
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = name;
-      paidSel.appendChild(opt);
-    });
+      applyExpenseTypeUI();
 
-    paidSel.value = "";
+      const expenseType = document.getElementById("expenseType").value;
 
-    /* ============================
-       VENDOR DROPDOWN
-       ============================ */
-    const venSel = document.getElementById("expenseVendorSelect");
-    venSel.innerHTML = "<option value=''>Select vendor</option>";
-
-    CACHED_VENDORS.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v.contact_id;
-      opt.textContent = v.contact_name;
-      venSel.appendChild(opt);
-    });
-
-    venSel.value = "";
-
-    /* ============================
-       APPLY ACCRUED RULES
-       ============================ */
-    applyExpenseTypeUI();
-
-    /* ============================
-       AUTO-SELECT DEFAULT PAID THROUGH (ORDINARY)
-       ============================ */
-    const expenseType = document.getElementById("expenseType").value;
-
-    if (
-      expenseType === "ordinary" &&
-      Array.isArray(ME?.allowed_cash_accounts) &&
-      ME.allowed_cash_accounts.length
-    ) {
-      const defaultId = String(ME.allowed_cash_accounts[0]);
-
-      // Only auto-select if user hasn't chosen yet
-      if (!paidSel.value) {
-        const opt = Array.from(paidSel.options).find(
-          o => o.value === defaultId
-        );
-        if (opt) {
-          paidSel.value = defaultId;
+      if (
+        expenseType === "ordinary" &&
+        Array.isArray(ME?.allowed_cash_accounts) &&
+        ME.allowed_cash_accounts.length
+      ) {
+        const defaultId = String(ME.allowed_cash_accounts[0]);
+        if (!paidSel.value) {
+          const opt = Array.from(paidSel.options).find(o => o.value === defaultId);
+          if (opt) {
+            paidSel.value = defaultId;
+          }
         }
       }
-    }
 
-  } catch (e) {
-    setCreateExpenseMessage(`Error loading expense dropdowns: ${e.message}`);
+    } catch (e) {
+      setCreateExpenseMessage(`Error loading expense dropdowns: ${e.message}`);
+    }
   }
-}
 
   function ensureOption(selectEl, value, label) {
     if (!value) return;
@@ -1651,11 +1667,11 @@ async function refreshExpenseDropdowns() {
       document.getElementById("btnResetExpense").click();
       setCreateExpenseMessage("");
 
-      // refresh lists so receipt column updates immediately (ordinary + accrued)
       refreshPending();
       refreshApproved();
       refreshAccrued();
       refreshWingsCash();
+      refreshPaymentsMade();
     } catch (e) {
       setCreateExpenseMessage(e.message);
     }
@@ -1738,7 +1754,6 @@ async function refreshExpenseDropdowns() {
   function openEditModal(expenseId, exp) {
     EDIT_EXPENSE_ID = expenseId;
 
-    // populate dropdowns from cached lists
     fillSelectFromCached(
       "editVendorSelect",
       CACHED_VENDORS,
@@ -1775,20 +1790,28 @@ async function refreshExpenseDropdowns() {
     document.getElementById("editAmount").value = exp.amount ?? "";
     document.getElementById("editDescription").value = exp.description || "";
 
-    // vendor: prefer vendor_id if present
     document.getElementById("editVendorSelect").value = exp.vendor_id || "";
     document.getElementById("editVendorName").value = exp.vendor_name || "";
 
     document.getElementById("editExpenseAccount").value = exp.expense_account_id || "";
     document.getElementById("editPaidThrough").value = exp.paid_through_account_id || "";
 
-    applyEditExpenseTypeUI();
+    // Hide expense account for payments made pending rows (and remember kind)
+    const kind = (exp.pending_kind || ((exp.expense_type === "accrued_payment") ? "accrued_payment" : "expense"));
+    EDIT_PENDING_KIND = kind;
 
+    const expenseAccountWrap = document.querySelector("#editExpenseAccountWrap");
+    if (expenseAccountWrap) {
+      expenseAccountWrap.style.display = (kind === "accrued_payment") ? "none" : "";
+    }
+
+    applyEditExpenseTypeUI();
     document.getElementById("editOverlay").classList.remove("hidden");
   }
 
   function closeEditModal() {
     EDIT_EXPENSE_ID = null;
+    EDIT_PENDING_KIND = "expense";
     document.getElementById("editOverlay").classList.add("hidden");
   }
 
@@ -1828,10 +1851,16 @@ async function refreshExpenseDropdowns() {
         description: document.getElementById("editDescription").value || "",
       };
 
-      if (!patch.expense_account_id) throw new Error("Expense account is required");
       if (!patch.paid_through_account_id) throw new Error("Paid through is required");
       if (!patch.amount || patch.amount <= 0) throw new Error("Amount must be > 0");
       if (!patch.vendor_id && !patch.vendor_name) throw new Error("Select a vendor or enter vendor name");
+
+      // If editing a pending payment made, do NOT send expense_account_id
+      if (EDIT_PENDING_KIND === "accrued_payment") {
+        delete patch.expense_account_id;
+      } else {
+        if (!patch.expense_account_id) throw new Error("Expense account is required");
+      }
 
       await apiPatch(`${API.expenses}/${EDIT_EXPENSE_ID}`, patch);
 
@@ -1840,6 +1869,7 @@ async function refreshExpenseDropdowns() {
       refreshPending();
       refreshAccrued();
       refreshWingsCash();
+      refreshPaymentsMade();
     } catch (e) {
       const editRes = document.getElementById("editResult");
       editRes.textContent = e.message;
@@ -1848,17 +1878,60 @@ async function refreshExpenseDropdowns() {
   });
 
   // --------------------------
-  // Professional Clear Modal (auto Paid Through Account ID)
+  // Clear modal helpers
   // --------------------------
+  function paidThroughAccountsForMe() {
+    if (!Array.isArray(CACHED_PAID_THROUGH)) return [];
+    const isAdmin = ME && ME.role === "admin";
+    if (isAdmin) return CACHED_PAID_THROUGH;
+
+    const allowed = new Set((ME && ME.allowed_cash_accounts) || []);
+    return CACHED_PAID_THROUGH.filter(a => allowed.has(extractIdName(a).id));
+  }
+
   function openClearModal(expenseId) {
     CLEAR_EXPENSE_ID = expenseId;
+
     document.getElementById("clearSubtitle").textContent = `Expense ID: ${expenseId}`;
 
-    // Default: Petty Cash auto
-    document.getElementById("clearPaidName").value = WINGS_PETTY_CASH_NAME || "Petty Cash";
-    document.getElementById("clearPaidId").value = WINGS_PETTY_CASH_ID || "";
+    detectWingsPettyCashFromPaidThrough();
+
+    const sel = document.getElementById("clearPaidThroughSelect");
+    sel.innerHTML = "<option value=''>Select Paid Through</option>";
+
+    // If cache missing, load then re-open
+    const src = paidThroughAccountsForMe();
+    if (!src.length) {
+      refreshExpenseDropdowns()
+        .then(() => openClearModal(expenseId))
+        .catch((e) => {
+          const r = document.getElementById("clearResult");
+          r.textContent = e.message || String(e);
+          r.classList.remove("hidden");
+        });
+      return;
+    }
+
+    src.forEach(a => {
+      const id = extractIdName(a).id;
+      const name = extractIdName(a).name;
+      if (!id) return;
+      const opt = document.createElement("option");
+      opt.value = String(id);
+      opt.textContent = String(name || id);
+      sel.appendChild(opt);
+    });
+
+    // Default petty cash if available
+    if (WINGS_PETTY_CASH_ID) {
+      const exists = Array.from(sel.options).some(o => o.value === WINGS_PETTY_CASH_ID);
+      if (exists) sel.value = WINGS_PETTY_CASH_ID;
+    }
+
+    document.getElementById("clearReference").value = "";
     document.getElementById("clearAmount").value = "";
     document.getElementById("clearDate").value = "";
+    document.getElementById("clearAttachment").value = "";
 
     const r = document.getElementById("clearResult");
     r.textContent = "";
@@ -1869,234 +1942,251 @@ async function refreshExpenseDropdowns() {
 
   function closeClearModal() {
     CLEAR_EXPENSE_ID = null;
+
+    const f = document.getElementById("clearAttachment");
+    if (f) f.value = "";
+    const ref = document.getElementById("clearReference");
+    if (ref) ref.value = "";
+
     document.getElementById("clearOverlay").classList.add("hidden");
   }
 
   document.getElementById("btnClearClose").addEventListener("click", closeClearModal);
   document.getElementById("btnClearCancel").addEventListener("click", closeClearModal);
 
+  async function confirmClearAccrued(accruedExpenseId) {
+    const paidThroughId = document.querySelector("#clearPaidThroughSelect").value;
+    const amount = parseFloat(document.querySelector("#clearAmount").value || "0");
+    const ref = (document.querySelector("#clearReference").value || "").trim();
+    const file = document.querySelector("#clearAttachment").files?.[0];
+
+    if (!paidThroughId) throw new Error("Paid Through is required");
+    if (!ref) throw new Error("Reference # is required");
+    if (!amount || amount <= 0) throw new Error("Amount must be > 0");
+
+    const data = await apiPost(`${API.accrued}/${accruedExpenseId}/clear`, {
+      paid_through_account_id: paidThroughId,
+      amount: amount,
+      reference_number: ref
+    });
+
+    const payment = data.payment || null;
+
+    // Prefer the spec shape: data.payment.expense_id
+    let paymentExpenseId = payment?.expense_id;
+
+    // Backward/alternate shapes (safe fallback)
+    if (!paymentExpenseId) {
+      paymentExpenseId =
+        data?.pending?.expense_id ||
+        extractExpenseId(data);
+    }
+
+    if (file) {
+      if (!paymentExpenseId) throw new Error("Upload failed: missing payment expense id");
+      await apiUploadReceipt(paymentExpenseId, file);
+    }
+
+    await refreshPending();
+    await refreshAccrued();
+    refreshWingsCash();
+    refreshPaymentsMade();
+  }
+
   document.getElementById("btnClearSave").addEventListener("click", async () => {
     try {
       if (!CLEAR_EXPENSE_ID) return;
 
-      const paidName = document.getElementById("clearPaidName").value.trim();
-      let paidId = document.getElementById("clearPaidId").value.trim();
-      const amt = parseFloat(document.getElementById("clearAmount").value || "0");
-      const dt = document.getElementById("clearDate").value || null;
-
-      if (!paidName) throw new Error("Paid Through Name is required");
-
-      // Auto fallback: try re-detect if empty
-      if (!paidId) {
-        detectWingsPettyCashFromPaidThrough();
-        paidId = (WINGS_PETTY_CASH_ID || "").trim();
-      }
-      if (!paidId) throw new Error("Paid Through Account ID could not be auto-detected. Refresh dropdowns and try again.");
-
-      if (!amt || amt <= 0) throw new Error("Amount must be > 0");
-
-      await apiPost(`${API.accrued}/${CLEAR_EXPENSE_ID}/clear`, {
-        paid_through_account_id: paidId,
-        paid_through_account_name: paidName,
-        amount: amt,
-        date: dt,
-      });
+      await confirmClearAccrued(CLEAR_EXPENSE_ID);
 
       closeClearModal();
       setResult("accruedResult", "");
-      refreshAccrued();
-      refreshWingsCash();
     } catch (e) {
       const r = document.getElementById("clearResult");
-      r.textContent = e.message;
+      r.textContent = e.message || String(e);
       r.classList.remove("hidden");
     }
   });
 
-// --------------------------
-// Approved
-// --------------------------
-async function refreshApproved() {
-  try {
-    const sd = document.getElementById("approvedStartDate").value || "";
-    const ed = document.getElementById("approvedEndDate").value || "";
+  // --------------------------
+  // Approved
+  // --------------------------
+  async function refreshApproved() {
+    try {
+      const sd = document.getElementById("approvedStartDate").value || "";
+      const ed = document.getElementById("approvedEndDate").value || "";
 
-    const qs = [];
-    if (sd) qs.push(`start_date=${encodeURIComponent(sd)}`);
-    if (ed) qs.push(`end_date=${encodeURIComponent(ed)}`);
-    const url = `${API.expenses}/approved${qs.length ? "?" + qs.join("&") : ""}`;
+      const qs = [];
+      if (sd) qs.push(`start_date=${encodeURIComponent(sd)}`);
+      if (ed) qs.push(`end_date=${encodeURIComponent(ed)}`);
+      const url = `${API.expenses}/approved${qs.length ? "?" + qs.join("&") : ""}`;
 
-    const resp = await apiGet(url);
-    const list = resp.approved || [];
-    const tbody = document.querySelector("#approvedTable tbody");
-    tbody.innerHTML = "";
+      const resp = await apiGet(url);
+      const list = resp.approved || [];
+      const tbody = document.querySelector("#approvedTable tbody");
+      tbody.innerHTML = "";
 
-    const isAdmin = ME && ME.role === "admin";
+      const isAdmin = ME && ME.role === "admin";
 
-    list.forEach(e => {
-      const tr = document.createElement("tr");
+      list.forEach(e => {
+        const tr = document.createElement("tr");
 
-      tr.innerHTML = `
-        <td>${e.date || ""}</td>
-        <td>${e.vendor_name || ""}</td>
-        <td>${e.amount ?? ""}</td>
-        <td>${e.reference_number || ""}</td>
-        <td>${(e.expense_type || "").toUpperCase()}</td>
-        <td>${renderReceiptCell(e)}</td>
-        <td class="tdActions">
-          ${isAdmin ? `
-            <input type="file" class="hidden" id="file_appr_${e.expense_id}">
-            <button class="btn mini" data-upl="${e.expense_id}">Attach</button>
-            <button class="btn mini" data-edit="${e.expense_id}">Edit</button>
-            <button class="btn danger mini" data-del="${e.expense_id}">Delete</button>
-          ` : `<span class="inlineHint">View only</span>`}
-        </td>
-      `;
+        tr.innerHTML = `
+          <td>${e.date || ""}</td>
+          <td>${e.vendor_name || ""}</td>
+          <td>${e.amount ?? ""}</td>
+          <td>${e.reference_number || ""}</td>
+          <td>${(e.expense_type || "").toUpperCase()}</td>
+          <td>${renderReceiptCell(e)}</td>
+          <td class="tdActions">
+            ${isAdmin ? `
+              <input type="file" class="hidden" id="file_appr_${e.expense_id}">
+              <button class="btn mini" data-upl="${e.expense_id}">Attach</button>
+              <button class="btn mini" data-edit="${e.expense_id}">Edit</button>
+              <button class="btn danger mini" data-del="${e.expense_id}">Delete</button>
+            ` : `<span class="inlineHint">View only</span>`}
+          </td>
+        `;
 
-      tbody.appendChild(tr);
-    });
-
-    // --------------------------
-    // Admin-only actions
-    // --------------------------
-    if (isAdmin) {
-      // Attach receipt
-      tbody.querySelectorAll("button[data-upl]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = btn.getAttribute("data-upl");
-          const fileInput = document.getElementById(`file_appr_${id}`);
-          if (fileInput) fileInput.click();
-        });
+        tbody.appendChild(tr);
       });
 
-      tbody.querySelectorAll("input[type=file]").forEach(inp => {
-        inp.addEventListener("change", async () => {
-          const id = inp.id.replace("file_appr_", "");
-          if (!inp.files || !inp.files[0]) return;
-
-          try {
-            await apiUploadReceipt(id, inp.files[0]);
-            setResult("approvedResult", "");
-            await refreshApproved();
-          } catch (e) {
-            setResult("approvedResult", e.message);
-          } finally {
-            inp.value = "";
-          }
+      if (isAdmin) {
+        tbody.querySelectorAll("button[data-upl]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-upl");
+            const fileInput = document.getElementById(`file_appr_${id}`);
+            if (fileInput) fileInput.click();
+          });
         });
-      });
 
-      // Edit
-      tbody.querySelectorAll("button[data-edit]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-edit");
-          try {
-            const exp = await loadExpenseForEdit(id);
-            openEditModal(id, exp);
-          } catch (e) {
-            setResult("approvedResult", e.message);
-          }
+        tbody.querySelectorAll("input[type=file]").forEach(inp => {
+          inp.addEventListener("change", async () => {
+            const id = inp.id.replace("file_appr_", "");
+            if (!inp.files || !inp.files[0]) return;
+
+            try {
+              await apiUploadReceipt(id, inp.files[0]);
+              setResult("approvedResult", "");
+              await refreshApproved();
+            } catch (e) {
+              setResult("approvedResult", e.message);
+            } finally {
+              inp.value = "";
+            }
+          });
         });
-      });
 
-      // Delete
-      tbody.querySelectorAll("button[data-del]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-del");
-          if (!confirm("Delete this expense?")) return;
-
-          try {
-            await apiDelete(`${API.expenses}/${id}`);
-            setResult("approvedResult", "");
-            await refreshApproved();
-            refreshWingsCash();
-          } catch (e) {
-            setResult("approvedResult", e.message);
-          }
+        tbody.querySelectorAll("button[data-edit]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-edit");
+            try {
+              const exp = await loadExpenseForEdit(id);
+              openEditModal(id, exp);
+            } catch (e) {
+              setResult("approvedResult", e.message);
+            }
+          });
         });
-      });
+
+        tbody.querySelectorAll("button[data-del]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-del");
+            if (!confirm("Delete this expense?")) return;
+
+            try {
+              await apiDelete(`${API.expenses}/${id}`);
+              setResult("approvedResult", "");
+              await refreshApproved();
+              refreshWingsCash();
+            } catch (e) {
+              setResult("approvedResult", e.message);
+            }
+          });
+        });
+      }
+
+      setResult("approvedResult", "");
+    } catch (e) {
+      setResult("approvedResult", e.message);
     }
-
-    setResult("approvedResult", "");
-  } catch (e) {
-    setResult("approvedResult", e.message);
   }
-}
 
-document
-  .getElementById("btnRefreshApproved")
-  .addEventListener("click", refreshApproved);
+  document.getElementById("btnRefreshApproved").addEventListener("click", refreshApproved);
 
-document
-  .getElementById("btnClearApprovedFilter")
-  .addEventListener("click", () => {
+  document.getElementById("btnClearApprovedFilter").addEventListener("click", () => {
     document.getElementById("approvedStartDate").value = "";
     document.getElementById("approvedEndDate").value = "";
     refreshApproved();
   });
 
-// --------------------------
-// Pending
-// --------------------------
-async function refreshPending() {
-  try {
-    const resp = await apiGet(`${API.pending}/expenses`);
-    const list = resp.pending || [];
-    const tbody = document.querySelector("#pendingTable tbody");
-    tbody.innerHTML = "";
+  // --------------------------
+  // Pending (ONE TABLE, TWO HEADERS)
+  // --------------------------
+  function headerRow(title) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="7" style="font-weight:700;background:#f4f6f8;">${title}</td>`;
+    return tr;
+  }
+
+  function pendingRow(p) {
+    if (!Array.isArray(p.receipts)) p.receipts = [];
 
     const isAdmin = ME && ME.role === "admin";
+    const canEdit = isAdmin || p.status === "pending";
 
-    list.forEach(p => {
-      // 🔧 FIX: normalize receipts so renderReceiptCell always works
-      if (!Array.isArray(p.receipts)) {
-        p.receipts = [];
-      }
+    const kind = (p.pending_kind || "expense");
+    const prefix = (kind === "accrued_payment") ? "pay" : "exp";
 
-      const canEdit = isAdmin || p.status === "pending";
+    const typeLabel =
+      (kind === "accrued_payment")
+        ? "PAYMENT MADE (CLEARING)"
+        : (p.expense_type || "").toUpperCase();
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${p.date || ""}</td>
-        <td>${p.vendor_name || ""}</td>
-        <td>${p.amount ?? ""}</td>
-        <td>${p.reference_number || ""}</td>
-        <td>${(p.expense_type || "").toUpperCase()}</td>
-        <td>${renderReceiptCell(p)}</td>
-        <td class="tdActions">
-          ${canEdit ? `
-            <input type="file" class="hidden" id="file_pen_${p.expense_id}">
-            <button class="btn mini" data-upl="${p.expense_id}">Attach</button>
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${p.date || ""}</td>
+      <td>${p.vendor_name || ""}</td>
+      <td>${p.amount ?? ""}</td>
+      <td>${p.reference_number || ""}</td>
+      <td>${typeLabel}</td>
+      <td>${renderReceiptCell(p)}</td>
+      <td class="tdActions">
+        ${canEdit ? `
+          <input type="file" class="hidden" id="file_pen_${prefix}_${p.expense_id}">
+          <button class="btn mini" data-upl="${p.expense_id}" data-pref="${prefix}">Attach</button>
 
-            ${isAdmin ? `
-              <button class="btn success mini" data-approve="${p.expense_id}">Approve</button>
-              <button class="btn danger mini" data-reject="${p.expense_id}">Reject</button>
-            ` : ``}
+          ${isAdmin ? `
+            <button class="btn success mini" data-approve="${p.expense_id}">Approve</button>
+            <button class="btn danger mini" data-reject="${p.expense_id}">Reject</button>
+          ` : ``}
 
-            <button class="btn mini" data-edit="${p.expense_id}">Edit</button>
-            <button class="btn danger mini" data-del="${p.expense_id}">Delete</button>
-          ` : `<span class="inlineHint">Awaiting approval</span>`}
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+          <button class="btn mini" data-edit="${p.expense_id}">Edit</button>
+          <button class="btn danger mini" data-del="${p.expense_id}">Delete</button>
+        ` : `<span class="inlineHint">Awaiting approval</span>`}
+      </td>
+    `;
+    return tr;
+  }
 
-    // ---------- Attach receipt (ADMIN + USER) ----------
+  function bindPendingHandlers(tbody) {
     tbody.querySelectorAll("button[data-upl]").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-upl");
-        document.getElementById(`file_pen_${id}`).click();
+        const pref = btn.getAttribute("data-pref") || "exp";
+        const inp = document.getElementById(`file_pen_${pref}_${id}`);
+        if (inp) inp.click();
       });
     });
 
     tbody.querySelectorAll("input[type=file]").forEach(inp => {
       inp.addEventListener("change", async () => {
-        const id = inp.id.replace("file_pen_", "");
+        const id = inp.id.split("_").pop();
         if (!inp.files || !inp.files[0]) return;
         try {
           await apiUploadReceipt(id, inp.files[0]);
           setResult("pendingResult", "");
-          refreshPending(); // 🔁 receipt appears immediately
+          refreshPending();
         } catch (e) {
           setResult("pendingResult", e.message);
         } finally {
@@ -2105,7 +2195,8 @@ async function refreshPending() {
       });
     });
 
-    // ---------- ADMIN ONLY ----------
+    const isAdmin = ME && ME.role === "admin";
+
     if (isAdmin) {
       tbody.querySelectorAll("button[data-approve]").forEach(btn => {
         btn.addEventListener("click", async () => {
@@ -2117,6 +2208,7 @@ async function refreshPending() {
             refreshApproved();
             refreshAccrued();
             refreshWingsCash();
+            refreshPaymentsMade();
           } catch (e) {
             setResult("pendingResult", e.message);
           }
@@ -2131,6 +2223,7 @@ async function refreshPending() {
             setResult("pendingResult", "");
             refreshPending();
             refreshWingsCash();
+            refreshPaymentsMade();
           } catch (e) {
             setResult("pendingResult", e.message);
           }
@@ -2138,7 +2231,6 @@ async function refreshPending() {
       });
     }
 
-    // ---------- EDIT (ADMIN + USER) ----------
     tbody.querySelectorAll("button[data-edit]").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-edit");
@@ -2151,7 +2243,6 @@ async function refreshPending() {
       });
     });
 
-    // ---------- DELETE (ADMIN + USER) ----------
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-del");
@@ -2161,296 +2252,502 @@ async function refreshPending() {
           setResult("pendingResult", "");
           refreshPending();
           refreshWingsCash();
+          refreshPaymentsMade();
         } catch (e) {
           setResult("pendingResult", e.message);
         }
       });
     });
-
-    setResult("pendingResult", "");
-  } catch (e) {
-    setResult("pendingResult", e.message);
   }
-}
 
-document.getElementById("btnRefreshPending").addEventListener("click", refreshPending);
+  function renderPendingGrouped(items) {
+    const expenses = items.filter(x => (x.pending_kind || "expense") === "expense");
+    const payments = items.filter(x => (x.pending_kind || "") === "accrued_payment");
+
+    const tbody = document.querySelector("#pendingTable tbody");
+    tbody.innerHTML = "";
+
+    tbody.appendChild(headerRow("Expenses"));
+    expenses.forEach(x => tbody.appendChild(pendingRow(x)));
+
+    tbody.appendChild(headerRow("Payments Made"));
+    payments.forEach(x => tbody.appendChild(pendingRow(x)));
+
+    bindPendingHandlers(tbody);
+  }
+
+  async function refreshPending() {
+    try {
+      const resp = await apiGet(`${API.pending}/expenses`);
+      const all = resp.pending || [];
+
+      renderPendingGrouped(all);
+
+      setResult("pendingResult", "");
+    } catch (e) {
+      setResult("pendingResult", e.message);
+    }
+  }
+
+  document.getElementById("btnRefreshPending").addEventListener("click", refreshPending);
+
   // --------------------------
   // Accrued + Clearing
   // --------------------------
-async function refreshAccrued() {
-  try {
-    const resp = await apiGet(`${API.accrued}/expenses?include_cleared=${SHOW_CLEARED ? "true" : "false"}`);
-    const list = resp.accrued || [];
-    const tbody = document.querySelector("#accruedTable tbody");
-    tbody.innerHTML = "";
-
-    // ✅ FIX: define isAdmin
-    const isAdmin = ME && ME.role === "admin";
-
-    list.forEach(a => {
-      const bal = a.balance ?? "";
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${a.date || ""}</td>
-        <td>${a.vendor_name || ""}</td>
-        <td>${a.amount ?? ""}</td>
-        <td>${a.reference_number || ""}</td>
-        <td>${(a.expense_type || "").toUpperCase()}</td>
-        <td>${bal}</td>
-        <td>${renderReceiptCell(a)}</td>
-        <td class="tdActions">
-          ${isAdmin ? `
-            <button class="btn mini" data-clear="${a.expense_id}">Clear</button>
-          ` : `<span class="inlineHint">View only</span>`}
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    if (isAdmin) {
-      tbody.querySelectorAll("button[data-clear]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const id = btn.getAttribute("data-clear");
-          if (!id) return;
-          openClearModal(id);
-        });
-      });
-    }
-
-    setResult("accruedResult", "");
-  } catch (e) {
-    setResult("accruedResult", e.message);
-  }
-}
-
-document.getElementById("btnRefreshAccrued").addEventListener("click", refreshAccrued);
-document.getElementById("btnToggleCleared").addEventListener("click", () => {
-  SHOW_CLEARED = !SHOW_CLEARED;
-  document.getElementById("btnToggleCleared").textContent = `Show Cleared: ${SHOW_CLEARED ? "On" : "Off"}`;
-  refreshAccrued();
-});
-
-// --------------------------
-// Users (Admin)
-// --------------------------
-
-document.getElementById("btnRefreshUsers").addEventListener("click", refreshUsers);
-
-async function refreshUsers() {
-  try {
-    const resp = await apiGet(`${API.auth}/users`);
-    const users = resp.users || [];
-
-    const tbody = document.querySelector("#usersTable tbody");
-    tbody.innerHTML = "";
-
-    users.forEach(u => {
-      const isSelf = ME && u.user_id === ME.user_id;
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${u.email}</td>
-        <td>${u.role}</td>
-        <td>${u.active ? "Yes" : "No"}</td>
-        <td class="tdActions">
-          <button class="btn mini" data-edit="${u.user_id}">Edit</button>
-          ${
-            isSelf
-              ? `<span class="inlineHint">Current user</span>`
-              : u.active
-                ? `<button class="btn danger mini" data-disable="${u.user_id}">Disable</button>`
-                : `<button class="btn success mini" data-enable="${u.user_id}">Enable</button>`
-          }
-          <button class="btn mini" data-password="${u.user_id}">
-            Set Password
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    // Edit user
-    tbody.querySelectorAll("[data-edit]").forEach(btn => {
-      btn.onclick = () => openUserEdit(btn.dataset.edit);
-    });
-
-    // Disable
-    tbody.querySelectorAll("[data-disable]").forEach(btn => {
-      btn.onclick = async () => {
-        if (!confirm("Disable this user?")) return;
-        await apiPatch(`${API.auth}/users/${btn.dataset.disable}/active`, { active: false });
-        refreshUsers();
-      };
-    });
-
-    // Enable
-    tbody.querySelectorAll("[data-enable]").forEach(btn => {
-      btn.onclick = async () => {
-        await apiPatch(`${API.auth}/users/${btn.dataset.enable}/active`, { active: true });
-        refreshUsers();
-      };
-    });
-
-    // Password reset
-    tbody.querySelectorAll("[data-password]").forEach(btn => {
-      btn.onclick = async () => {
-        const pwd = prompt("Set new password (minimum 8 characters)");
-        if (!pwd || pwd.length < 8) {
-          alert("Password must be at least 8 characters");
-          return;
-        }
-        await apiPatch(`${API.auth}/users/${btn.dataset.password}/password`, { password: pwd });
-        alert("Password updated");
-      };
-    });
-
-  } catch (e) {
-    setResult("usersResult", e.message);
-  }
-}
-
-// --------------------------
-// User Edit (Admin) — HARD SAFE VERSION
-// --------------------------
-
-let EDIT_USER_ID = null;
-
-function mustGet(id) {
-  const el = document.getElementById(id);
-  if (!el) {
-    throw new Error(`Missing DOM element: #${id}`);
-  }
-  return el;
-}
-
-async function openUserEdit(userId) {
-  try {
-    const resp = await apiGet(`${API.auth}/users`);
-    const user = (resp.users || []).find(u => u.user_id === userId);
-    if (!user) throw new Error("User not found");
-
-    EDIT_USER_ID = user.user_id;
-
-    const emailEl = mustGet("userEditEmail");
-    const roleEl  = mustGet("userEditRole");
-    const cashEl  = mustGet("userEditCash");
-    const overlay = mustGet("userEditOverlay");
-
-    emailEl.value = user.email || "";
-    roleEl.value  = user.role || "user";
-    cashEl.innerHTML = "";
-
-    if (!CACHED_PAID_THROUGH.length) {
-      await refreshExpenseDropdowns();
-    }
-
-    const allowed = user.allowed_cash_accounts || [];
-
-    CACHED_PAID_THROUGH.forEach(acc => {
-      const id =
-        acc["Account ID"] ||
-        acc["Account Id"] ||
-        acc["account_id"];
-
-      if (!id) return;
-
-      const name =
-        acc["Account Name"] ||
-        acc["account_name"] ||
-        id;
-
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = name;
-      opt.selected = allowed.includes(id);
-
-      cashEl.appendChild(opt);
-    });
-
-    overlay.classList.remove("hidden");
-
-  } catch (e) {
-    console.error(e);
-    setResult("usersResult", e.message);
-  }
-}
-
-function closeUserEdit() {
-  EDIT_USER_ID = null;
-  mustGet("userEditOverlay").classList.add("hidden");
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  mustGet("btnUserEditClose").onclick  = closeUserEdit;
-  mustGet("btnUserEditCancel").onclick = closeUserEdit;
-
-  mustGet("btnUserEditSave").onclick = async () => {
+  async function refreshAccrued() {
     try {
-      if (!EDIT_USER_ID) return;
+      const resp = await apiGet(`${API.accrued}/expenses?include_cleared=${SHOW_CLEARED ? "true" : "false"}`);
+      const list = resp.accrued || [];
+      const tbody = document.querySelector("#accruedTable tbody");
+      tbody.innerHTML = "";
 
-      const role = mustGet("userEditRole").value;
-      const cashSel = mustGet("userEditCash");
+      const isAdmin = ME && ME.role === "admin";
 
-      const allowed = Array.from(cashSel.selectedOptions).map(o => o.value);
-
-      // ---- SAVE TO BACKEND ----
-      await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/role`, { role });
-
-      await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/cash-access`, {
-        allowed_cash_accounts: allowed,
+      list.forEach(a => {
+        const bal = a.balance ?? "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${a.date || ""}</td>
+          <td>${a.vendor_name || ""}</td>
+          <td>${a.amount ?? ""}</td>
+          <td>${a.reference_number || ""}</td>
+          <td>${(a.expense_type || "").toUpperCase()}</td>
+          <td>${bal}</td>
+          <td>${renderReceiptCell(a)}</td>
+          <td class="tdActions">
+            ${isAdmin ? `
+              <button class="btn mini" data-clear="${a.expense_id}">Clear</button>
+            ` : `<span class="inlineHint">View only</span>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
       });
 
-      // ---- CLOSE MODAL ----
-      closeUserEdit();
+      if (isAdmin) {
+        tbody.querySelectorAll("button[data-clear]").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-clear");
+            if (!id) return;
+            openClearModal(id);
+          });
+        });
+      }
 
-      // ---- REFRESH USERS TABLE ----
-      await refreshUsers();
+      setResult("accruedResult", "");
+    } catch (e) {
+      setResult("accruedResult", e.message);
+    }
+  }
 
-      // =====================================================
-      // 🔥 CRITICAL FIX 1 — RELOAD CURRENT USER PERMISSIONS
-      // =====================================================
-      await loadMe();
-      applyRoleUI();
+  document.getElementById("btnRefreshAccrued").addEventListener("click", refreshAccrued);
+  document.getElementById("btnToggleCleared").addEventListener("click", () => {
+    SHOW_CLEARED = !SHOW_CLEARED;
+    document.getElementById("btnToggleCleared").textContent = `Show Cleared: ${SHOW_CLEARED ? "On" : "Off"}`;
+    refreshAccrued();
+  });
 
-      // ---- REFRESH CASH DASHBOARD WITH NEW ACCOUNT ----
-      refreshWingsCash();
+  // --------------------------
+  // 5.4 Clearing view/delete helpers
+  // --------------------------
+  async function deleteClearing(accruedId, clearingId) {
+    await apiDelete(`${API.accrued}/${accruedId}/clearing/${clearingId}`);
+    refreshAccrued();
+  }
+
+  async function viewClearing(accruedId, clearingId) {
+    const r = await apiGet(`${API.accrued}/${accruedId}/clearing/${clearingId}`);
+    // Minimal view: show JSON. If you want, we can render this in a styled modal.
+    alert(JSON.stringify(r, null, 2));
+  }
+
+  // --------------------------
+  // Payments Made (Accrued)
+  // --------------------------
+  async function refreshPaymentsMade() {
+    try {
+      const resp = await apiGet(`${API.accrued}/payments`);
+
+      const list =
+        resp.payments ||
+        resp.items ||
+        resp.results ||
+        resp.pending ||
+        [];
+
+      const tbody = document.querySelector("#paymentsMadeTable tbody");
+      tbody.innerHTML = "";
+
+      if (!Array.isArray(list) || list.length === 0) {
+        setResult("paymentsMadeResult", "No payments made yet.");
+        return;
+      }
+
+      const isAdmin = ME && ME.role === "admin";
+      const esc = (typeof escapeHtml === "function")
+        ? escapeHtml
+        : (s) => String(s ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+      list.forEach(p => {
+        const tr = document.createElement("tr");
+
+        const date = p.date || p.payment_date || "";
+        const paidThrough = p.paid_through_account_name || p.paid_through_name || p.account_name || "";
+        const amount = (p.amount ?? "");
+        const ref = p.reference_number || p.reference || "";
+
+        // "Which accrued expense is this clearing for?"
+        const accruedId =
+          p.source_accrued_expense_id ||           // <-- your object has this
+          p.accrued_expense_id ||
+          p.clearing_for_expense_id ||
+          p.source_expense_id ||
+          p.accruedId ||
+          "";
+
+        // "Which clearing record is this?"
+        // Some APIs return clearing_id; other shapes may not.
+        const clearingId =
+          p.clearing_id ||
+          p.clearingId ||
+          (Array.isArray(p.clearing) && p.clearing[0] && (p.clearing[0].clearing_id || p.clearing[0].id)) ||
+          p.clearing_payment_id ||
+          p.payment_id ||
+          "";
+
+        // Fallback: if this row is the clearing payment expense itself
+        // (like your sample: pending_kind === "accrued_payment"), we can still View/Edit/Delete the payment expense.
+        const paymentExpenseId = p.expense_id || p.id || "";
+
+        // display "Clearing For" column
+        const clearingFor =
+          p.source_accrued_expense_id ||
+          p.clearing_for_expense_id ||
+          p.source_expense_id ||
+          p.accrued_expense_id ||
+          "";
+
+        const hasClearingKeys = !!(accruedId && clearingId);
+        const isPaymentExpenseRow = (p.pending_kind === "accrued_payment") && !!paymentExpenseId;
+
+        tr.innerHTML = `
+          <td>${esc(date)}</td>
+          <td>${esc(paidThrough)}</td>
+          <td>${esc(amount)}</td>
+          <td>${esc(clearingFor)}</td>
+          <td>${esc(ref)}</td>
+          <td class="tdActions">
+            ${
+              isAdmin && hasClearingKeys
+                ? `
+                  <button class="btn mini" data-view-clearing="1" data-accrued="${esc(accruedId)}" data-clearing="${esc(clearingId)}">View</button>
+                  <button class="btn success mini" data-edit-clearing="1" data-accrued="${esc(accruedId)}" data-clearing="${esc(clearingId)}">Edit</button>
+                  <button class="btn danger mini" data-del-clearing="1" data-accrued="${esc(accruedId)}" data-clearing="${esc(clearingId)}">Delete</button>
+                `
+                : (isAdmin && isPaymentExpenseRow)
+                  ? `
+                    <button class="btn mini" data-view-payexp="1" data-exp="${esc(paymentExpenseId)}">View</button>
+                    <button class="btn success mini" data-edit-payexp="1" data-exp="${esc(paymentExpenseId)}">Edit</button>
+                    <button class="btn danger mini" data-del-payexp="1" data-exp="${esc(paymentExpenseId)}">Delete</button>
+                  `
+                  : `<span class="inlineHint">—</span>`
+            }
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      if (isAdmin) {
+        // Clearing-record actions (preferred path)
+        tbody.querySelectorAll("button[data-view-clearing]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const accruedId = btn.getAttribute("data-accrued");
+            const clearingId = btn.getAttribute("data-clearing");
+            try {
+              await openClearingModal(accruedId, clearingId, false);
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+
+        tbody.querySelectorAll("button[data-edit-clearing]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const accruedId = btn.getAttribute("data-accrued");
+            const clearingId = btn.getAttribute("data-clearing");
+            try {
+              await openClearingModal(accruedId, clearingId, true);
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+
+        tbody.querySelectorAll("button[data-del-clearing]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const accruedId = btn.getAttribute("data-accrued");
+            const clearingId = btn.getAttribute("data-clearing");
+            if (!confirm("Delete this payment made entry? This will not delete the Zoho journal.")) return;
+
+            try {
+              await deleteClearing(accruedId, clearingId);
+              refreshPaymentsMade();
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+
+        // Payment-expense actions (fallback when accrued/clearing ids are missing or the accrued was deleted)
+        tbody.querySelectorAll("button[data-view-payexp]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-exp");
+            try {
+              const exp = await loadExpenseForEdit(id);
+              openEditModal(id, exp);
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+
+        tbody.querySelectorAll("button[data-edit-payexp]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-exp");
+            try {
+              const exp = await loadExpenseForEdit(id);
+              openEditModal(id, exp);
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+
+        tbody.querySelectorAll("button[data-del-payexp]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-exp");
+            if (!confirm("Delete this payment expense record? This will not delete the Zoho journal.")) return;
+
+            try {
+              await apiDelete(`${API.expenses}/${id}`);
+              refreshPaymentsMade();
+              refreshPending();
+              refreshWingsCash();
+            } catch (e) {
+              setResult("paymentsMadeResult", e.message || String(e));
+            }
+          });
+        });
+      }
+
+      setResult("paymentsMadeResult", "");
+    } catch (e) {
+      setResult("paymentsMadeResult", e.message);
+    }
+  }
+
+  document.getElementById("btnRefreshPaymentsMade").addEventListener("click", refreshPaymentsMade);
+
+
+  // --------------------------
+  // Users (Admin)
+  // --------------------------
+  document.getElementById("btnRefreshUsers").addEventListener("click", refreshUsers);
+
+  async function refreshUsers() {
+    try {
+      const resp = await apiGet(`${API.auth}/users`);
+      const users = resp.users || [];
+
+      const tbody = document.querySelector("#usersTable tbody");
+      tbody.innerHTML = "";
+
+      users.forEach(u => {
+        const isSelf = ME && u.user_id === ME.user_id;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${u.email}</td>
+          <td>${u.role}</td>
+          <td>${u.active ? "Yes" : "No"}</td>
+          <td class="tdActions">
+            <button class="btn mini" data-edit="${u.user_id}">Edit</button>
+            ${
+              isSelf
+                ? `<span class="inlineHint">Current user</span>`
+                : u.active
+                  ? `<button class="btn danger mini" data-disable="${u.user_id}">Disable</button>`
+                  : `<button class="btn success mini" data-enable="${u.user_id}">Enable</button>`
+            }
+            <button class="btn mini" data-password="${u.user_id}">
+              Set Password
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll("[data-edit]").forEach(btn => {
+        btn.onclick = () => openUserEdit(btn.dataset.edit);
+      });
+
+      tbody.querySelectorAll("[data-disable]").forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm("Disable this user?")) return;
+          await apiPatch(`${API.auth}/users/${btn.dataset.disable}/active`, { active: false });
+          refreshUsers();
+        };
+      });
+
+      tbody.querySelectorAll("[data-enable]").forEach(btn => {
+        btn.onclick = async () => {
+          await apiPatch(`${API.auth}/users/${btn.dataset.enable}/active`, { active: true });
+          refreshUsers();
+        };
+      });
+
+      tbody.querySelectorAll("[data-password]").forEach(btn => {
+        btn.onclick = async () => {
+          const pwd = prompt("Set new password (minimum 8 characters)");
+          if (!pwd || pwd.length < 8) {
+            alert("Password must be at least 8 characters");
+            return;
+          }
+          await apiPatch(`${API.auth}/users/${btn.dataset.password}/password`, { password: pwd });
+          alert("Password updated");
+        };
+      });
 
     } catch (e) {
-      const r = mustGet("userEditResult");
-      r.textContent = e.message;
-      r.classList.remove("hidden");
+      setResult("usersResult", e.message);
     }
-  };
-});
-
-
-// --------------------------
-// Boot
-// --------------------------
-(async function boot() {
-  // Always start in a clean logged-out visual state
-  enterLogin();
-  document.getElementById("btnLogout").style.display = "none";
-
-  await loadMe();
-  applyRoleUI();
-
-  if (ME) {
-    document.getElementById("loginState").textContent =
-      `Logged in as ${ME.email} (${ME.role})`;
-
-    // Ensure logout is visible when session is restored
-    document.getElementById("btnLogout").style.display = "inline-block";
-
-    enterApp();
-    loadAssetDropdowns();
-  } else {
-    document.getElementById("loginState").textContent = "Not logged in";
   }
-})();
 
+  // --------------------------
+  // User Edit (Admin) — HARD SAFE VERSION
+  // --------------------------
+  let EDIT_USER_ID = null;
+
+  function mustGet(id) {
+    const el = document.getElementById(id);
+    if (!el) {
+      throw new Error(`Missing DOM element: #${id}`);
+    }
+    return el;
+  }
+
+  async function openUserEdit(userId) {
+    try {
+      const resp = await apiGet(`${API.auth}/users`);
+      const user = (resp.users || []).find(u => u.user_id === userId);
+      if (!user) throw new Error("User not found");
+
+      EDIT_USER_ID = user.user_id;
+
+      const emailEl = mustGet("userEditEmail");
+      const roleEl  = mustGet("userEditRole");
+      const cashEl  = mustGet("userEditCash");
+      const overlay = mustGet("userEditOverlay");
+
+      emailEl.value = user.email || "";
+      roleEl.value  = user.role || "user";
+      cashEl.innerHTML = "";
+
+      if (!CACHED_PAID_THROUGH.length) {
+        await refreshExpenseDropdowns();
+      }
+
+      const allowed = user.allowed_cash_accounts || [];
+
+      CACHED_PAID_THROUGH.forEach(acc => {
+        const id = acc["Account ID"] || acc["Account Id"] || acc["account_id"];
+        if (!id) return;
+
+        const name = acc["Account Name"] || acc["account_name"] || id;
+
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = name;
+        opt.selected = allowed.includes(id);
+
+        cashEl.appendChild(opt);
+      });
+
+      overlay.classList.remove("hidden");
+
+    } catch (e) {
+      console.error(e);
+      setResult("usersResult", e.message);
+    }
+  }
+
+  function closeUserEdit() {
+    EDIT_USER_ID = null;
+    mustGet("userEditOverlay").classList.add("hidden");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    mustGet("btnUserEditClose").onclick  = closeUserEdit;
+    mustGet("btnUserEditCancel").onclick = closeUserEdit;
+
+    mustGet("btnUserEditSave").onclick = async () => {
+      try {
+        if (!EDIT_USER_ID) return;
+
+        const role = mustGet("userEditRole").value;
+        const cashSel = mustGet("userEditCash");
+
+        const allowed = Array.from(cashSel.selectedOptions).map(o => o.value);
+
+        await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/role`, { role });
+
+        await apiPatch(`${API.auth}/users/${EDIT_USER_ID}/cash-access`, {
+          allowed_cash_accounts: allowed,
+        });
+
+        closeUserEdit();
+        await refreshUsers();
+
+        await loadMe();
+        applyRoleUI();
+        refreshWingsCash();
+
+      } catch (e) {
+        const r = mustGet("userEditResult");
+        r.textContent = e.message;
+        r.classList.remove("hidden");
+      }
+    };
+  });
+
+  // --------------------------
+  // Boot
+  // --------------------------
+  (async function boot() {
+    enterLogin();
+    document.getElementById("btnLogout").style.display = "none";
+
+    await loadMe();
+    applyRoleUI();
+
+    if (ME) {
+      document.getElementById("loginState").textContent =
+        `Logged in as ${ME.email} (${ME.role})`;
+
+      document.getElementById("btnLogout").style.display = "inline-block";
+
+      enterApp();
+      loadAssetDropdowns();
+    } else {
+      document.getElementById("loginState").textContent = "Not logged in";
+    }
+  })();
 </script>
-
 
 </body>
 </html>
