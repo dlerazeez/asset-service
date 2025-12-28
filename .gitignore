@@ -18,3 +18,9 @@ __pycache__/
 # runtime state
 app/services/pending_expenses.json
 data/sessions.json
+
+# Local data (do not commit)
+/data/users.json
+/data/invites.json
+/data/sessions.json
+/data/uploads/
