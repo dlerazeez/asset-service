@@ -3,3 +3,18 @@ __pycache__/
 *.pyc
 *.db
 .env
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# local env
+.env
+
+# runtime uploads
+/data/uploads/
+/uploads/
+
+# runtime state
+app/services/pending_expenses.json
+data/sessions.json
